@@ -523,7 +523,7 @@ from api.v1.admin_route import router as v1_admin_route_router
  
 from api.v1.user_route import router as v1_user_route_router
 
-app.include_router(v1_admin_route_router, prefix='/v1')
+app.include_router(v1_admin_route_router, prefix='/v1',include_in_schema=False)
  
 app.include_router(v1_user_route_router, prefix='/v1')
 # --- auto-routes-end ---
