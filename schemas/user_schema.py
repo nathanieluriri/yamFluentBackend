@@ -55,6 +55,7 @@ class UserUpdate(BaseModel):
 class UserOut(UserBase):
     # Add other fields here 
     loginType:Optional[LoginType]=None
+    avatarUrl:str =Field(default="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6LXNJFTmLzCoExghcATlCWG85kI8dsnhJng&s")
     id: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("_id", "id"),
