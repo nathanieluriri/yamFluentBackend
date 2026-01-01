@@ -152,7 +152,7 @@ def send_password_reset_link(user_email: str, link: str):
 
         send_html_email_optimized(
             sender_email=EMAIL_USERNAME,
-            sender_display_name="Crayonics",
+            sender_display_name="YamFluent",
             receiver_email=user_email,
             subject="Password Reset",
             html_content=html_body,

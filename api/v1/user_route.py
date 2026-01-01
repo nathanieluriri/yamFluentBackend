@@ -170,14 +170,36 @@ async def update_driver_password_while_logged_in(driver_details:UserUpdatePasswo
 
 
 
-@router.post("/password-reset/request",response_model=APIResponse[ResetPasswordInitiationResponse] )
-async def start_password_reset_process_for_driver_that_forgot_password(driver_details:ResetPasswordInitiation):
+@router.post(
+    "/password-reset/request",
+    response_model=APIResponse[ResetPasswordInitiationResponse],
+    summary="Request password reset magic link",
+    description=(
+        "Starts the password reset flow by emailing a magic link. "
+        "Always returns a generic success message to avoid user enumeration."
+    ),
+)
+async def start_password_reset_process_for_driver_that_forgot_password(
+    driver_details: ResetPasswordInitiation
+):
+    """Email a magic-link reset token to the provided address if it exists."""
     driver =  await user_reset_password_intiation(user_details=driver_details)   
     return APIResponse(data = driver,status_code=200,detail="Successfully updated profile")
 
 
 
-@router.patch("/password-reset/confirm")
-async def finish_password_reset_process_for_driver_that_forgot_password(driver_details:ResetPasswordConclusion):
+@router.patch(
+    "/password-reset/confirm",
+    response_model=APIResponse[bool],
+    summary="Confirm password reset with magic link token",
+    description=(
+        "Resets the password using the magic link token. "
+        "The token is single-use and expires after 15 minutes."
+    ),
+)
+async def finish_password_reset_process_for_driver_that_forgot_password(
+    driver_details: ResetPasswordConclusion
+):
+    """Reset the password using a valid reset token and a new password."""
     driver =  await user_reset_password_conclusion(driver_details)
     return APIResponse(data = driver,status_code=200,detail="Successfully updated profile")
