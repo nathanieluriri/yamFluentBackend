@@ -1,0 +1,26 @@
+name: Deploy to PROD
+
+on:
+  push:
+    branches: [master] # or main if that’s your default branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: Production    # Uses the Production environment secrets
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: SSH & Deploy to PROD
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}       # Production environment secret for EC2 host
+          username: ubuntu                # default AWS Ubuntu AMI user
+          key: ${{ secrets.KEY }}         # Production environment secret for private SSH key
+          port: 22
+          script: |
+            cd yamFluentBackend            
+            git pull origin master         
+            sudo docker compose down
+            sudo docker compose up --build -d
