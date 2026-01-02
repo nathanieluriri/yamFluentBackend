@@ -80,6 +80,14 @@ class UserUpdateProfile(BaseModel):
     last_updated: int = Field(default_factory=lambda: int(time.time()))
  
 
+class UserPersonalProfilingDataOptions(BaseModel):
+    nativeLanguages: List[str]
+    currentProficiencies: List[str]
+    mainGoals: List[str]
+    learnerTypes: List[str]
+    dailyPracticeTimes: List[str]
+
+
 class UserOut(UserBase):
     # Add other fields here 
     loginType:Optional[LoginType]=None

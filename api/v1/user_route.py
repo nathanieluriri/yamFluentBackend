@@ -5,7 +5,17 @@ from urllib.parse import quote, urlparse
 from fastapi import APIRouter, Request, status, Depends, Form, HTTPException
 from typing import List, Dict, Any
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
-from schemas.imports import ResetPasswordConclusion, ResetPasswordInitiation, ResetPasswordInitiationResponse, UserType
+from schemas.imports import (
+    ResetPasswordConclusion,
+    ResetPasswordInitiation,
+    ResetPasswordInitiationResponse,
+    UserType,
+    NativeLanguage,
+    CurrentProficiency,
+    MainGoals,
+    LearnerType,
+    DailyPracticeTime,
+)
 from schemas.response_schema import APIResponse
 from schemas.tokens_schema import accessTokenOut
 from schemas.user_schema import (
@@ -15,6 +25,7 @@ from schemas.user_schema import (
     UserBase,
     UserSignUp,
     UserUpdateProfile,
+    UserPersonalProfilingDataOptions,
     UserRefresh,
     LoginType,
     UserUpdatePassword,
@@ -168,6 +179,23 @@ async def delete_user_account(token:accessTokenOut = Depends(verify_token_user_r
 async def update_onboarding_information_and_complete_user_profile(driver_details:UserUpdateProfile,token:accessTokenOut = Depends(verify_token_user_role)):
     driver =  await update_user_by_id(driver_id=token.userId,driver_data=driver_details)
     return APIResponse(data = driver,status_code=200,detail="Successfully updated profile")
+ 
+
+@router.get(
+    "/onboarding/options",
+    response_model=APIResponse[UserPersonalProfilingDataOptions],
+    dependencies=[Depends(verify_token_user_role)],
+    response_model_exclude_none=True,
+)
+async def retrieve_onboarding_options():
+    payload = UserPersonalProfilingDataOptions(
+        nativeLanguages=[language.value for language in NativeLanguage],
+        currentProficiencies=[level.value for level in CurrentProficiency],
+        mainGoals=[goal.value for goal in MainGoals],
+        learnerTypes=[learner.value for learner in LearnerType],
+        dailyPracticeTimes=[time.value for time in DailyPracticeTime],
+    )
+    return APIResponse(status_code=200, data=payload, detail="Fetched successfully")
 
 
 
