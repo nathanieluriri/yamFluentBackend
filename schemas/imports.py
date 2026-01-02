@@ -7,6 +7,25 @@ from typing import Optional,List,Any
 from enum import Enum
 import time
 
+class ScenarioName(str, Enum):
+    CAFE_ORDERING = "cafe_ordering"
+    AIRPORT_CHECKIN = "airport_checkin"
+    DOCTOR_VISIT = "doctor_visit"
+    JOB_INTERVIEW = "job_interview"
+    SCHOOL_CLASS_PARTICIPATION = "school_class_participation"
+    SCHOOL_PRESENTATION = "school_presentation"
+    SCHOOL_ENROLLMENT = "school_enrollment"
+    UNIVERSITY_ORIENTATION = "university_orientation"
+    UNIVERSITY_SEMINAR_DISCUSSION = "university_seminar_discussion"
+    UNIVERSITY_ADMIN_OFFICE = "university_admin_office"
+    GROUP_PROJECT_MEETING = "group_project_meeting"
+    DORM_ROOMMATE_DISCUSSION = "dorm_roommate_discussion"
+    LIBRARY_RESEARCH_HELP = "library_research_help"
+    CAMPUS_CLUB_MEETING = "campus_club_meeting"
+    WORKPLACE_TEAM_MEETING = "workplace_team_meeting"
+    CUSTOMER_SUPPORT_CALL = "customer_support_call"
+    APARTMENT_RENTAL_VIEWING = "apartment_rental_viewing"
+    BANK_ACCOUNT_OPENING = "bank_account_opening"
 class UserType(str,Enum):
     member= "member"
    

@@ -23,12 +23,14 @@ from schemas.user_schema import (
     UserLogin,
     UserOut,
     UserBase,
+    UserScenerioOptions,
     UserSignUp,
     UserUpdateProfile,
     UserPersonalProfilingDataOptions,
     UserRefresh,
     LoginType,
     UserUpdatePassword,
+    build_user_scenerio_options,
 )
 from services.user_service import (
     add_user,
@@ -172,7 +174,7 @@ async def delete_user_account(token:accessTokenOut = Depends(verify_token_user_r
 
 
 # -------------------------
-# -------- USER UPDATES ---
+# -------- Onboarding -----
 # -------------------------
 
 @router.patch("/onboard/complete",dependencies=[Depends(verify_token_user_role)])
@@ -198,6 +200,18 @@ async def retrieve_onboarding_options():
     return APIResponse(status_code=200, data=payload, detail="Fetched successfully")
 
 
+
+# -------------------------
+# -------- scenerios -----
+# -------------------------
+@router.get(
+    "/scenerio/options",
+    response_model=APIResponse[List[UserScenerioOptions]],
+    dependencies=[Depends(verify_token_user_role)],
+    response_model_exclude_none=True,
+)
+def get_scenerio_options():
+    return APIResponse(data=build_user_scenerio_options(),status_code=200,detail="Fetched successfully")
 
  
 # -----------------------------------

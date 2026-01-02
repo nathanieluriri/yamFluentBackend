@@ -1,6 +1,8 @@
 from datetime import timedelta
+from typing_extensions import Annotated
+from typing import TypedDict
 from schemas.imports import *
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, conint, field_validator
 import time
 from security.hash import hash_password
 
@@ -87,6 +89,137 @@ class UserPersonalProfilingDataOptions(BaseModel):
     learnerTypes: List[str]
     dailyPracticeTimes: List[str]
 
+from enum import Enum
+
+
+class UserScenerioOptions(BaseModel):
+    scenarioName: ScenarioName
+    scenarioDifficultyRating: Annotated[int, Field(ge=1, le=5)]
+    scenerioImageUrl: str
+    benefitsOfScenerio: str
+
+
+class ScenarioConfig(TypedDict):
+    scenarioDifficultyRating: int
+    scenerioImageUrl: str
+    benefitsOfScenerio: str
+
+
+SCENARIO_CONFIG: dict[ScenarioName, ScenarioConfig] = {
+    ScenarioName.CAFE_ORDERING: {
+        "scenarioDifficultyRating": 1,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Cafe+Ordering",
+        "benefitsOfScenerio": "Practice quick ordering, clarifying items, and handling payment politely.",
+    },
+    ScenarioName.AIRPORT_CHECKIN: {
+        "scenarioDifficultyRating": 3,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Airport+Check-in",
+        "benefitsOfScenerio": "Build confidence with documents, baggage questions, and gate changes.",
+    },
+    ScenarioName.DOCTOR_VISIT: {
+        "scenarioDifficultyRating": 3,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Doctor+Visit",
+        "benefitsOfScenerio": "Explain symptoms clearly, ask follow-up questions, and understand advice.",
+    },
+    ScenarioName.JOB_INTERVIEW: {
+        "scenarioDifficultyRating": 4,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Job+Interview",
+        "benefitsOfScenerio": "Answer behavioral questions, describe experience, and ask smart questions.",
+    },
+    ScenarioName.SCHOOL_CLASS_PARTICIPATION: {
+        "scenarioDifficultyRating": 2,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=School+Class+Participation",
+        "benefitsOfScenerio": "Practice asking and answering questions in class with clear pronunciation.",
+    },
+    ScenarioName.SCHOOL_PRESENTATION: {
+        "scenarioDifficultyRating": 3,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=School+Presentation",
+        "benefitsOfScenerio": "Organize ideas, signal transitions, and handle audience questions.",
+    },
+    ScenarioName.SCHOOL_ENROLLMENT: {
+        "scenarioDifficultyRating": 2,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=School+Enrollment",
+        "benefitsOfScenerio": "Handle forms, requirements, and schedule questions with staff.",
+    },
+    ScenarioName.UNIVERSITY_ORIENTATION: {
+        "scenarioDifficultyRating": 2,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=University+Orientation",
+        "benefitsOfScenerio": "Navigate campus info sessions and ask for directions and details.",
+    },
+    ScenarioName.UNIVERSITY_SEMINAR_DISCUSSION: {
+        "scenarioDifficultyRating": 4,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=University+Seminar+Discussion",
+        "benefitsOfScenerio": "Practice turn-taking, citing points, and respectful disagreement.",
+    },
+    ScenarioName.UNIVERSITY_ADMIN_OFFICE: {
+        "scenarioDifficultyRating": 3,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=University+Admin+Office",
+        "benefitsOfScenerio": "Resolve enrollment issues, deadlines, and fee questions confidently.",
+    },
+    ScenarioName.GROUP_PROJECT_MEETING: {
+        "scenarioDifficultyRating": 3,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Group+Project+Meeting",
+        "benefitsOfScenerio": "Assign tasks, negotiate deadlines, and summarize next steps.",
+    },
+    ScenarioName.DORM_ROOMMATE_DISCUSSION: {
+        "scenarioDifficultyRating": 2,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Dorm+Roommate+Discussion",
+        "benefitsOfScenerio": "Discuss shared rules, resolve issues, and stay polite but direct.",
+    },
+    ScenarioName.LIBRARY_RESEARCH_HELP: {
+        "scenarioDifficultyRating": 2,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Library+Research+Help",
+        "benefitsOfScenerio": "Ask for sources, explain topics, and understand guidance.",
+    },
+    ScenarioName.CAMPUS_CLUB_MEETING: {
+        "scenarioDifficultyRating": 2,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Campus+Club+Meeting",
+        "benefitsOfScenerio": "Introduce yourself, share interests, and volunteer for roles.",
+    },
+    ScenarioName.WORKPLACE_TEAM_MEETING: {
+        "scenarioDifficultyRating": 4,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Workplace+Team+Meeting",
+        "benefitsOfScenerio": "Give updates, clarify blockers, and align on priorities.",
+    },
+    ScenarioName.CUSTOMER_SUPPORT_CALL: {
+        "scenarioDifficultyRating": 4,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Customer+Support+Call",
+        "benefitsOfScenerio": "Explain issues clearly, follow troubleshooting steps, and confirm fixes.",
+    },
+    ScenarioName.APARTMENT_RENTAL_VIEWING: {
+        "scenarioDifficultyRating": 3,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Apartment+Rental+Viewing",
+        "benefitsOfScenerio": "Ask about lease terms, utilities, and neighborhood details.",
+    },
+    ScenarioName.BANK_ACCOUNT_OPENING: {
+        "scenarioDifficultyRating": 3,
+        "scenerioImageUrl": "https://placehold.co/600x400?text=Bank+Account+Opening",
+        "benefitsOfScenerio": "Understand account options, fees, and required documents.",
+    },
+}
+
+
+def build_user_scenerio_options() -> List[UserScenerioOptions]:
+    missing = [name for name in ScenarioName if name not in SCENARIO_CONFIG]
+    extra = [name for name in SCENARIO_CONFIG.keys() if name not in ScenarioName]
+    if missing or extra:
+        raise TypeError(
+            "Scenario config mismatch: "
+            f"missing={missing}, extra={extra}"
+        )
+    options: List[UserScenerioOptions] = []
+    for scenario_name in ScenarioName:
+        config = SCENARIO_CONFIG[scenario_name]
+        options.append(
+            UserScenerioOptions(
+                scenarioName=scenario_name,
+                scenarioDifficultyRating=config["scenarioDifficultyRating"],
+                scenerioImageUrl=config["scenerioImageUrl"],
+                benefitsOfScenerio=config["benefitsOfScenerio"],
+            )
+        )
+    return options
+    
 
 class UserOut(UserBase):
     # Add other fields here 
