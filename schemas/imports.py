@@ -55,16 +55,16 @@ class MainGoals(str, Enum):
 
 
 class CurrentProficiency(str, Enum):
-    BEGINNER = "(BEGINNER) I know basic words and phrases. "
-    INTERMEDIATE = "(INTERMEDIATE) I can hold everyday conversation."
-    ADVANCED = "(ADVANCED) I speak confidently and fluently."
+    BEGINNER = "[https://res.cloudinary.com/dloh0ffv3/image/upload/v1767333942/begginer_current_proficiency_a7bbpe.png] (BEGINNER) I know basic words and phrases. "
+    INTERMEDIATE = "[https://res.cloudinary.com/dloh0ffv3/image/upload/v1767333942/intermediate_current_proficiency_fhwou3.png] (INTERMEDIATE) I can hold everyday conversation."
+    ADVANCED = "[https://res.cloudinary.com/dloh0ffv3/image/upload/v1767333942/advanced_current_proficiency_y0usq8.png] (ADVANCED) I speak confidently and fluently."
     
     
 class LearnerType(str, Enum):
-    SpeakingFirstLearner = "(Speaking-first learner) I prefer to speak as much as possible.  "
-    VisualLearner = "(Visual learner) I learn better with images and examples."
-    ShortBurstLearner = "(Short-burst learner) I like quick, focused practice sessions."
-    StructuredLearner="(Structured learner) I prefer step-by-step lessons."
+    SpeakingFirstLearner = "[https://res.cloudinary.com/dloh0ffv3/image/upload/v1767333942/Speaking_first_learner_type_xy4js2.png] (Speaking-first learner) I prefer to speak as much as possible.  "
+    VisualLearner = "[https://res.cloudinary.com/dloh0ffv3/image/upload/v1767333942/Visual_learner_type_q2q4zn.png] (Visual learner) I learn better with images and examples."
+    ShortBurstLearner = " [https://res.cloudinary.com/dloh0ffv3/image/upload/v1767333942/Short_burst_learner_type_agw8xv.png] (Short-burst learner) I like quick, focused practice sessions."
+    StructuredLearner="[https://res.cloudinary.com/dloh0ffv3/image/upload/v1767333942/Structural_learner_type_nbarte.png] (Structured learner) I prefer step-by-step lessons."
     
 
 
