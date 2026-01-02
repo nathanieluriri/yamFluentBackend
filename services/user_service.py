@@ -27,6 +27,7 @@ from dotenv import load_dotenv
 import httpx
 
 from services.email_service import send_password_reset_link
+from core.redis_cache import cache_get_json, cache_set_json
 
 
 load_dotenv()
@@ -249,8 +250,62 @@ async def logout_user(user_id: str):
 
 
 
-async def user_reset_password_intiation(user_details:ResetPasswordInitiation)->ResetPasswordInitiationResponse:
- 
+def _cache_key_for_reset_token(token: str) -> str:
+    return f"pwreset:{token}"
+
+
+async def _cache_reset_token(token: str, user_id: str, user_type: UserType, expires_at: datetime, used: bool):
+    ttl_seconds = max(0, int((expires_at - datetime.utcnow()).total_seconds()))
+    if ttl_seconds == 0:
+        return
+    await cache_set_json(
+        key=_cache_key_for_reset_token(token),
+        value={
+            "userId": user_id,
+            "userType": user_type.value,
+            "expiresAt": int(expires_at.timestamp()),
+            "used": used,
+        },
+        ttl_seconds=ttl_seconds,
+    )
+
+
+async def _get_cached_reset_token(token: str):
+    cached = await cache_get_json(_cache_key_for_reset_token(token))
+    if not cached:
+        return None
+    return cached
+
+
+async def get_reset_token_state(token: str):
+    cached = await _get_cached_reset_token(token)
+    if cached:
+        return cached
+
+    db_token = await get_reset_token(filter_dict={"token": token})
+    if not db_token or db_token.expiresAt is None:
+        return None
+
+    await _cache_reset_token(
+        token=token,
+        user_id=db_token.userId,
+        user_type=db_token.userType,
+        expires_at=db_token.expiresAt,
+        used=db_token.used,
+    )
+    return {
+        "userId": db_token.userId,
+        "userType": db_token.userType.value,
+        "expiresAt": int(db_token.expiresAt.timestamp()),
+        "used": db_token.used,
+    }
+
+
+async def user_reset_password_intiation(
+    user_details: ResetPasswordInitiation,
+    base_url: str,
+) -> ResetPasswordInitiationResponse:
+
     email = user_details.email.strip()
     user = await get_user(
         filter_dict={"email": {"$regex": f"^{re.escape(email)}$", "$options": "i"}}
@@ -264,9 +319,17 @@ async def user_reset_password_intiation(user_details:ResetPasswordInitiation)->R
             used=False,
         )
         reset_token_create = ResetTokenCreate(**token.model_dump())
-        await create_reset_token(reset_token_data=reset_token_create)
-        link = f"yamfluent://auth/reset-password?reset_token={reset_token}"
-        success = send_password_reset_link(user_email=email, link=link)
+        db_token = await create_reset_token(reset_token_data=reset_token_create)
+        if db_token.expiresAt is not None:
+            await _cache_reset_token(
+                token=reset_token,
+                user_id=db_token.userId,
+                user_type=db_token.userType,
+                expires_at=db_token.expiresAt,
+                used=db_token.used,
+            )
+        landing_url = f"{base_url.rstrip('/')}/users/auth/reset-password?reset_token={reset_token}"
+        success = send_password_reset_link(user_email=email, link=landing_url)
         if success != 0:
             raise HTTPException(status_code=500, detail="Reset link did not send to the user email")
 
@@ -282,17 +345,17 @@ async def user_reset_password_conclusion(
     if not user_details.resetToken or len(user_details.resetToken) < 10:
         raise HTTPException(status_code=400, detail="Invalid reset token")
 
-    token = await get_reset_token(filter_dict={"token": user_details.resetToken})
-    if not token:
+    token_state = await get_reset_token_state(user_details.resetToken) # type: ignore
+    if not token_state:
         raise HTTPException(status_code=404,detail="Reset token not found")
 
-    if token.userType != UserType.member:
+    if token_state["userType"] != UserType.member.value:
         raise HTTPException(status_code=403,detail="Reset token is not for a member")
 
-    if token.used:
+    if token_state["used"]:
         raise HTTPException(status_code=400,detail="Reset token already used")
 
-    if token.expiresAt is None or token.expiresAt <= datetime.utcnow():
+    if token_state["expiresAt"] <= int(datetime.utcnow().timestamp()):
         raise HTTPException(status_code=400,detail="Reset token expired")
 
     driver_update = UserUpdatePassword(
@@ -300,7 +363,7 @@ async def user_reset_password_conclusion(
     )
 
     result = await update_user_by_id(
-        driver_id=token.userId,
+        driver_id=token_state["userId"],
         driver_data=driver_update,
         is_password_getting_changed=True
     )
@@ -309,5 +372,12 @@ async def user_reset_password_conclusion(
         raise HTTPException(status_code=500,detail="Failed to update user password")
 
     await mark_reset_token_used(filter_dict={"token": user_details.resetToken})
+    await _cache_reset_token(
+        token=user_details.resetToken,
+        user_id=token_state["userId"],
+        user_type=UserType.member,
+        expires_at=datetime.utcfromtimestamp(token_state["expiresAt"]),
+        used=True,
+    )
 
     return True
