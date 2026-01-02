@@ -1,6 +1,6 @@
 from datetime import timedelta
 from schemas.imports import *
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 import time
 from security.hash import hash_password
 
@@ -51,10 +51,40 @@ class UserUpdate(BaseModel):
         if self.password:
             self.password = hash_password(self.password)
         return self
+    
+    
+    
+
+
+class UserPersonalProfilingData(BaseModel):
+    nativeLanguage: NativeLanguage
+    currentProficiency: CurrentProficiency
+    mainGoals: List[MainGoals] = Field(
+        ..., 
+        min_length=1,   
+        max_length=4     
+    )
+    learnerType:LearnerType
+    dailyPracticeTime:DailyPracticeTime
+    @field_validator("mainGoals")
+    @classmethod
+    def unique_goals(cls, v):
+        if len(set(v)) != len(v):
+            raise ValueError("Main goals must be unique")
+        return v
+    
+    
+class UserUpdateProfile(BaseModel):
+    # Add other fields here 
+    userPersonalProfilingData:Optional[UserPersonalProfilingData]=None
+    last_updated: int = Field(default_factory=lambda: int(time.time()))
+ 
 
 class UserOut(UserBase):
     # Add other fields here 
     loginType:Optional[LoginType]=None
+    userPersonalProfilingData:Optional[UserPersonalProfilingData]=None
+    onboardingCompleted:Optional[bool]=False
     avatarUrl:str =Field(default="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6LXNJFTmLzCoExghcATlCWG85kI8dsnhJng&s")
     id: Optional[str] = Field(
         default=None,
@@ -136,6 +166,10 @@ class UserOut(UserBase):
 
             # Format as ISO 8601 with milliseconds and UTC offset
             model.date_Joined = dt_joined.isoformat(timespec="milliseconds")
+        if model.userPersonalProfilingData is None:
+            model.onboardingCompleted=False
+        else:
+            model.onboardingCompleted=True
         return model
     class Config:
         populate_by_name = True  # allows using `id` when constructing the model

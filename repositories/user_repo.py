@@ -54,7 +54,7 @@ async def get_users(filter_dict: dict = {},start=0,stop=100) -> List[UserOut]:
 async def update_user(filter_dict: dict, user_data: UserUpdate) -> UserOut:
     result = await db.users.find_one_and_update(
         filter_dict,
-        {"$set": user_data.model_dump()},
+        {"$set": user_data.model_dump(exclude_none=True)},
         return_document=ReturnDocument.AFTER
     )
     returnable_result = UserOut(**result)

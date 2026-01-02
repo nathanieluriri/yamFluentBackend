@@ -14,7 +14,7 @@ from schemas.user_schema import (
     UserOut,
     UserBase,
     UserSignUp,
-  
+    UserUpdateProfile,
     UserRefresh,
     LoginType,
     UserUpdatePassword,
@@ -157,6 +157,17 @@ async def delete_user_account(token:accessTokenOut = Depends(verify_token_user_r
     result = await remove_user(user_id=token.userId)
     return result
 
+
+
+
+# -------------------------
+# -------- USER UPDATES ---
+# -------------------------
+
+@router.patch("/onboard/complete",dependencies=[Depends(verify_token_user_role)])
+async def update_onboarding_information_and_complete_user_profile(driver_details:UserUpdateProfile,token:accessTokenOut = Depends(verify_token_user_role)):
+    driver =  await update_user_by_id(driver_id=token.userId,driver_data=driver_details)
+    return APIResponse(data = driver,status_code=200,detail="Successfully updated profile")
 
 
 
