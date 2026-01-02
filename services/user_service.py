@@ -2,7 +2,7 @@
 import asyncio
 import re
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson import ObjectId
 from fastapi import HTTPException
 from typing import List, Optional
@@ -250,11 +250,29 @@ async def logout_user(user_id: str):
 
 
 
+RESET_TOKEN_TTL_SECONDS = 15 * 60
+
+
 def _cache_key_for_reset_token(token: str) -> str:
     return f"pwreset:{token}"
 
+def _resolve_reset_expires_at(expires_at: datetime | None, date_created: int | None) -> datetime | None:
+    if expires_at is not None:
+        return expires_at
+    if date_created is None:
+        return None
+    return datetime.utcfromtimestamp(date_created) + timedelta(seconds=RESET_TOKEN_TTL_SECONDS)
 
-async def _cache_reset_token(token: str, user_id: str, user_type: UserType, expires_at: datetime, used: bool):
+
+async def _cache_reset_token(
+    token: str,
+    user_id: str,
+    user_type: UserType,
+    expires_at: datetime | None,
+    used: bool,
+):
+    if expires_at is None:
+        return
     ttl_seconds = max(0, int((expires_at - datetime.utcnow()).total_seconds()))
     if ttl_seconds == 0:
         return
@@ -279,24 +297,29 @@ async def _get_cached_reset_token(token: str):
 
 async def get_reset_token_state(token: str):
     cached = await _get_cached_reset_token(token)
+    print("cached",cached)
     if cached:
         return cached
 
     db_token = await get_reset_token(filter_dict={"token": token})
-    if not db_token or db_token.expiresAt is None:
+    
+    if not db_token or db_token.used==True:
         return None
-
+    print("db_token",db_token)
+    expires_at = _resolve_reset_expires_at(db_token.expiresAt, db_token.date_created)
+    if expires_at is None:
+        return None
     await _cache_reset_token(
         token=token,
         user_id=db_token.userId,
         user_type=db_token.userType,
-        expires_at=db_token.expiresAt,
+        expires_at=expires_at,
         used=db_token.used,
     )
     return {
         "userId": db_token.userId,
         "userType": db_token.userType.value,
-        "expiresAt": int(db_token.expiresAt.timestamp()),
+        "expiresAt": int(expires_at.timestamp()),
         "used": db_token.used,
     }
 
@@ -320,15 +343,17 @@ async def user_reset_password_intiation(
         )
         reset_token_create = ResetTokenCreate(**token.model_dump())
         db_token = await create_reset_token(reset_token_data=reset_token_create)
-        if db_token.expiresAt is not None:
+        expires_at = _resolve_reset_expires_at(db_token.expiresAt, db_token.date_created)
+        if expires_at is not None:
             await _cache_reset_token(
                 token=reset_token,
                 user_id=db_token.userId,
                 user_type=db_token.userType,
-                expires_at=db_token.expiresAt,
+                expires_at=expires_at,
                 used=db_token.used,
             )
-        landing_url = f"{base_url.rstrip('/')}/users/auth/reset-password?reset_token={reset_token}"
+        landing_url = f"{base_url.rstrip('/')}/v1/users/auth/reset-password?reset_token={reset_token}"
+        print(landing_url)
         success = send_password_reset_link(user_email=email, link=landing_url)
         if success != 0:
             raise HTTPException(status_code=500, detail="Reset link did not send to the user email")

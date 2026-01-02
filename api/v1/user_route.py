@@ -267,7 +267,7 @@ def _render_reset_landing_page(reset_token: str, deep_link: str) -> str:
 
             <div class="section">
                 <strong>Option 2: Reset in your browser</strong>
-                <form method="post" action="/users/auth/reset-password">
+                <form method="post" action="/v1/users/auth/reset-password">
                     <input type="hidden" name="reset_token" value="{reset_token}" />
                     <label for="password">New password</label>
                     <input type="password" id="password" name="password" minlength="8" required />
@@ -377,6 +377,7 @@ async def _validate_reset_token_for_web(reset_token: str) -> str:
         return "This reset link is invalid."
 
     token_state = await get_reset_token_state(reset_token)
+     
     if not token_state:
         return "This reset link is invalid or expired."
 
@@ -406,6 +407,7 @@ async def start_password_reset_process_for_driver_that_forgot_password(
     driver_details: ResetPasswordInitiation
 ):
     """Email a magic-link reset token to the provided address if it exists."""
+    
     redirect_uri = str(request.url_for("mobile_auth_callback_user"))
     redirect_uri = re.sub(r"^http://", "https://", redirect_uri)
     parsed = urlparse(redirect_uri)

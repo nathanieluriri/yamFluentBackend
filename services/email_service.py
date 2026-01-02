@@ -149,6 +149,7 @@ def send_password_reset_link(user_email: str, link: str):
             f"{link}\n\n"
             "This link expires in 15 minutes.\n"
         )
+        print(link)
 
         send_html_email_optimized(
             sender_email=EMAIL_USERNAME,
