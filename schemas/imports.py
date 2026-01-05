@@ -88,11 +88,11 @@ class LearnerType(str, Enum):
 
 
 class DailyPracticeTime(str, Enum):
-    fiveMins = "5 minutes a day — the easiest way to start."
-    tenMins = "10 minutes a day — small, steady progress."
-    twelveMins = "12 minutes a day — a little extra momentum."
-    fifteenMins = "15 minutes a day — a focused daily habit."
-    twentyMins = "20 minutes a day — deeper daily practice."
+    fiveMins = "5 mins"
+    tenMins = "10 mins"
+    twelveMins = "12 mins"
+    fifteenMins = "15 mins"
+    twentyMins = "20 mins"
     
 
 
