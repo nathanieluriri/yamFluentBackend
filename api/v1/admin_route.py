@@ -1,7 +1,9 @@
 
 from fastapi import APIRouter, HTTPException, Query, status, Path,Depends,Body
-from typing import List,Annotated
+from typing import List,Annotated, Optional
+from schemas.imports import ScenarioName
 from schemas.response_schema import APIResponse
+from schemas.session import SessionOut
 from schemas.tokens_schema import accessTokenOut
 from schemas.admin_schema import (
     AdminCreate,
@@ -25,6 +27,7 @@ from services.admin_service import (
 
 )
 from security.auth import verify_token_to_refresh,verify_admin_token
+from services.session_service import remove_session, retrieve_sessions
 router = APIRouter(prefix="/admins", tags=["Admins"])
             
  
@@ -245,3 +248,100 @@ async def delete_admin_account(
     # The 'result' is assumed to be a standard FastAPI response object or a dict/model 
     # that is automatically converted to a response.
     return result
+
+
+
+
+
+
+# ------------------------------
+# Delete an existing Session
+# ------------------------------
+
+@router.delete("/{user_id}/{id}", response_model=APIResponse[None])
+async def delete_session(id: str = Path(..., description="ID of the session to delete"),user_id:str = Path(..., description="User Id of the session to delete") ,token:accessTokenOut = Depends(verify_admin_token)):
+    """
+    Deletes an existing Session by its ID.
+    """
+    deleted = await remove_session(id,user_id=user_id)
+    if not deleted:
+        # This assumes remove_session returns a boolean or similar
+        # to indicate if deletion was successful (i.e., item was found).
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session not found or deletion failed")
+    
+    return APIResponse(status_code=200, data=None, detail=f"Session deleted successfully")
+
+
+
+
+
+# ------------------------------
+# List Sessions (with pagination and filtering)
+# ------------------------------
+@router.get("/", response_model=APIResponse[List[SessionOut]],dependencies=[Depends(verify_admin_token)],)
+async def list_sessions(
+    start: Optional[int] = Query(None, description="Start index for range-based pagination"),
+    stop: Optional[int] = Query(None, description="Stop index for range-based pagination"),
+    page_number: Optional[int] = Query(None, description="Page number for page-based pagination (0-indexed)"),
+    
+    # New: Filter parameter expects a JSON string
+    filters: Optional[ScenarioName] = Query(None, description="Optional Scenario name string "),
+    user_id:str = Path(..., description="User Id of the user you want to view their session"),
+
+):
+    """
+    Retrieves a list of Sessions with pagination and optional filtering.
+    - Priority 1: Range-based (start/stop)
+    - Priority 2: Page-based (page_number)
+    - Priority 3: Default (first 100)
+    """
+    PAGE_SIZE = 50
+    parsed_filters = {}
+    
+    
+    
+    
+
+    # 1. Handle Filters
+    if filters:
+        try:
+            parsed_filters =  {"scenario":filters.value}
+        except :
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid JSON format for 'filters' query parameter."
+            )
+
+    # 2. Determine Pagination
+    # Case 1: Prefer start/stop if provided
+    if start is not None or stop is not None:
+        if start is None or stop is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Both 'start' and 'stop' must be provided together.")
+        if stop < start:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'stop' cannot be less than 'start'.")
+        
+        # Pass filters to the service layer
+        items = await retrieve_sessions(filters=parsed_filters, start=start, stop=stop,user_id=user_id)
+        return APIResponse(status_code=200, data=items, detail="Fetched successfully")
+
+    # Case 2: Use page_number if provided
+    elif page_number is not None:
+        if page_number < 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'page_number' cannot be negative.")
+        
+        start_index = page_number * PAGE_SIZE
+        stop_index = start_index + PAGE_SIZE
+        # Pass filters to the service layer
+        items = await retrieve_sessions(filters=parsed_filters, start=start_index, stop=stop_index,user_id=user_id)
+        return APIResponse(status_code=200, data=items, detail=f"Fetched page {page_number} successfully")
+
+    # Case 3: Default (no params)
+    else:
+        # Pass filters to the service layer
+        items = await retrieve_sessions(filters=parsed_filters, start=0, stop=100,user_id=user_id)
+        detail_msg = "Fetched first 100 records successfully"
+        if parsed_filters:
+            # If filters were applied, adjust the detail message
+            detail_msg = f"Fetched first 100 records successfully (with filters applied)"
+        return APIResponse(status_code=200, data=items, detail=detail_msg)
+

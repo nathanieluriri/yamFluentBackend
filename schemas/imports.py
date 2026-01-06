@@ -1,12 +1,46 @@
 from bson import ObjectId
-from pydantic import GetJsonSchemaHandler
+from pydantic import GetJsonSchemaHandler,  field_serializer
 from pydantic import BaseModel, EmailStr, Field,model_validator
 from pydantic_core import core_schema
 from datetime import datetime,timezone
-from typing import Optional,List,Any
+from typing import Optional,List,Any,Literal
 from enum import Enum
 import time
 
+
+class TurnScore(BaseModel):
+    confidence:int
+    fluency:int
+    hesitation:int
+class TurnUpdate(BaseModel):
+    index: int  # which turn in the list to update
+    score:Optional[TurnScore]=None
+    mispronounced_words: Optional[List[str]] = None
+    user_audio_url: Optional[str] = None
+ 
+    
+class Turn(BaseModel):
+    index: int
+    score:Optional[TurnScore]=None
+    role: Literal["ai", "user"]
+    text: str
+    mispronounced_words: Optional[List[str]] = None
+    # Audio of correct pronunciation (AI voice)
+    model_audio_url: Optional[str]  
+    # Audio recorded by the user (can be null)
+    user_audio_url: Optional[str] = None
+
+class AIGeneratedTurns(BaseModel):
+
+    role: Literal["ai", "user"]
+    text: str
+ 
+    
+class FluencyScript(BaseModel):
+    totalNumberOfTurns:int
+    turns: List[Turn]
+    
+    
 class ScenarioName(str, Enum):
     CAFE_ORDERING = "cafe_ordering"
     AIRPORT_CHECKIN = "airport_checkin"
