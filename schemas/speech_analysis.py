@@ -6,73 +6,73 @@ from pydantic import BaseModel, Field
 
 
 class WordTiming(BaseModel):
-    start: Optional[float] = None
-    end: Optional[float] = None
+    start: Optional[float] = Field(default=None, serialization_alias="start")
+    end: Optional[float] = Field(default=None, serialization_alias="end")
 
 
 class Token(BaseModel):
-    idx: int
-    text: str
-    confidence: Optional[float] = None
-    timing: Optional[WordTiming] = None
+    idx: int = Field(serialization_alias="idx")
+    text: str = Field(serialization_alias="text")
+    confidence: Optional[float] = Field(default=None, serialization_alias="confidence")
+    timing: Optional[WordTiming] = Field(default=None, serialization_alias="timing")
 
 
 class ASRMeta(BaseModel):
-    model: Optional[str] = None
-    parameters: Dict[str, Any] = Field(default_factory=dict)
-    raw_response: Optional[Dict[str, Any]] = None
+    model: Optional[str] = Field(default=None, serialization_alias="model")
+    parameters: Dict[str, Any] = Field(default_factory=dict, serialization_alias="parameters")
+    raw_response: Optional[Dict[str, Any]] = Field(default=None, serialization_alias="rawResponse")
 
 
 class TokenizationMeta(BaseModel):
-    lowercase: bool = True
-    strip_punctuation: bool = True
-    split_on_whitespace: bool = True
-    extra: Dict[str, Any] = Field(default_factory=dict)
+    lowercase: bool = Field(default=True, serialization_alias="lowercase")
+    strip_punctuation: bool = Field(default=True, serialization_alias="stripPunctuation")
+    split_on_whitespace: bool = Field(default=True, serialization_alias="splitOnWhitespace")
+    extra: Dict[str, Any] = Field(default_factory=dict, serialization_alias="extra")
 
 
 class AlignmentMeta(BaseModel):
-    algorithm: str = "edit_distance"
-    ignore_insertions: bool = True
-    ignore_deletions: bool = True
-    threshold: float = 0.4
-    extra: Dict[str, Any] = Field(default_factory=dict)
+    algorithm: str = Field(default="edit_distance", serialization_alias="algorithm")
+    ignore_insertions: bool = Field(default=True, serialization_alias="ignoreInsertions")
+    ignore_deletions: bool = Field(default=True, serialization_alias="ignoreDeletions")
+    threshold: float = Field(default=0.4, serialization_alias="threshold")
+    extra: Dict[str, Any] = Field(default_factory=dict, serialization_alias="extra")
 
 
 class MispronouncedLogicMeta(BaseModel):
-    threshold: float = 0.4
-    dedupe: bool = True
-    ignore_insertions: bool = True
-    ignore_deletions: bool = True
-    extra: Dict[str, Any] = Field(default_factory=dict)
+    threshold: float = Field(default=0.4, serialization_alias="threshold")
+    dedupe: bool = Field(default=True, serialization_alias="dedupe")
+    ignore_insertions: bool = Field(default=True, serialization_alias="ignoreInsertions")
+    ignore_deletions: bool = Field(default=True, serialization_alias="ignoreDeletions")
+    extra: Dict[str, Any] = Field(default_factory=dict, serialization_alias="extra")
 
 
 class AlignedPair(BaseModel):
     op: Literal["match", "substitute", "insert", "delete"]
-    expected_idx: Optional[int]
-    actual_idx: Optional[int]
-    expected: str
-    actual: str
-    edit_distance: int
-    normalized_edit_distance: float
+    expected_idx: Optional[int] = Field(default=None, serialization_alias="expectedIdx")
+    actual_idx: Optional[int] = Field(default=None, serialization_alias="actualIdx")
+    expected: str = Field(serialization_alias="expected")
+    actual: str = Field(serialization_alias="actual")
+    edit_distance: int = Field(serialization_alias="editDistance")
+    normalized_edit_distance: float = Field(serialization_alias="normalizedEditDistance")
 
 
 class AlignmentSummary(BaseModel):
-    substitutions: int
-    insertions: int
-    deletions: int
-    correct: int
-    wer: float
+    substitutions: int = Field(serialization_alias="substitutions")
+    insertions: int = Field(serialization_alias="insertions")
+    deletions: int = Field(serialization_alias="deletions")
+    correct: int = Field(serialization_alias="correct")
+    wer: float = Field(serialization_alias="wer")
 
 
 class MispronouncedWord(BaseModel):
-    expected: str
-    actual: str
-    expected_idx: Optional[int]
-    actual_idx: Optional[int]
-    normalized_edit_distance: float
-    reason: Literal["near_miss", "deduped"]
-    timing: Optional[WordTiming] = None
-    deduped: bool = False
+    expected: str = Field(serialization_alias="expected")
+    actual: str = Field(serialization_alias="actual")
+    expected_idx: Optional[int] = Field(default=None, serialization_alias="expectedIdx")
+    actual_idx: Optional[int] = Field(default=None, serialization_alias="actualIdx")
+    normalized_edit_distance: float = Field(serialization_alias="normalizedEditDistance")
+    reason: Literal["near_miss", "deduped"] = Field(serialization_alias="reason")
+    timing: Optional[WordTiming] = Field(default=None, serialization_alias="timing")
+    deduped: bool = Field(default=False, serialization_alias="deduped")
 
 
 class IgnoredDifference(BaseModel):
@@ -84,25 +84,29 @@ class IgnoredDifference(BaseModel):
         "exact_match",
         "empty_side",
         "deduped",
-    ]
-    expected: str
-    actual: str
-    expected_idx: Optional[int]
-    actual_idx: Optional[int]
-    normalized_edit_distance: Optional[float] = None
+    ] = Field(serialization_alias="ignoredBecause")
+    expected: str = Field(serialization_alias="expected")
+    actual: str = Field(serialization_alias="actual")
+    expected_idx: Optional[int] = Field(default=None, serialization_alias="expectedIdx")
+    actual_idx: Optional[int] = Field(default=None, serialization_alias="actualIdx")
+    normalized_edit_distance: Optional[float] = Field(default=None, serialization_alias="normalizedEditDistance")
 
 
 class TurnSpeechAnalysis(BaseModel):
-    expected_text: str
-    asr_text: str
-    asr_meta: ASRMeta
-    tokenization_meta: TokenizationMeta
-    alignment_meta: AlignmentMeta
-    mispronounced_logic_meta: MispronouncedLogicMeta
-    expected_tokens: List[Token]
-    actual_tokens: List[Token]
-    aligned_pairs: List[AlignedPair]
-    alignment_summary: AlignmentSummary
-    mispronounced_words: List[MispronouncedWord]
-    ignored_differences: List[IgnoredDifference]
-    extra: Dict[str, Any] = Field(default_factory=dict)
+    expected_text: str = Field(serialization_alias="expectedText")
+    asr_text: str = Field(serialization_alias="asrText")
+    asr_meta: ASRMeta = Field(serialization_alias="asrMeta")
+    tokenization_meta: TokenizationMeta = Field(serialization_alias="tokenizationMeta")
+    alignment_meta: AlignmentMeta = Field(serialization_alias="alignmentMeta")
+    mispronounced_logic_meta: MispronouncedLogicMeta = Field(serialization_alias="mispronouncedLogicMeta")
+    expected_tokens: List[Token] = Field(serialization_alias="expectedTokens")
+    actual_tokens: List[Token] = Field(serialization_alias="actualTokens")
+    aligned_pairs: List[AlignedPair] = Field(serialization_alias="alignedPairs")
+    alignment_summary: AlignmentSummary = Field(serialization_alias="alignmentSummary")
+    mispronounced_words: List[MispronouncedWord] = Field(serialization_alias="mispronouncedWords")
+    ignored_differences: List[IgnoredDifference] = Field(serialization_alias="ignoredDifferences")
+    extra: Dict[str, Any] = Field(default_factory=dict, serialization_alias="extra")
+
+    model_config = {
+        "populate_by_name": True,
+    }

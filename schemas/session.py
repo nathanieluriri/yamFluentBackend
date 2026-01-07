@@ -51,8 +51,8 @@ class SessionBase(SessionBaseRequest):
 class SessionCreate(SessionBase):
     # Add other fields here
     script:FluencyScript
-    date_created: int = Field(default_factory=lambda: int(time.time()))
-    last_updated: int = Field(default_factory=lambda: int(time.time()))
+    date_created: int = Field(default_factory=lambda: int(time.time()), serialization_alias="dateCreated")
+    last_updated: int = Field(default_factory=lambda: int(time.time()), serialization_alias="lastUpdated")
 
 
 class ScriptTurnsUpdate(BaseModel):
@@ -61,13 +61,13 @@ class ScriptTurnsUpdate(BaseModel):
     
 class SessionUpdate(BaseModel):
     script: ScriptTurnsUpdate
-    last_updated: int = Field(default_factory=lambda: int(time.time()))
+    last_updated: int = Field(default_factory=lambda: int(time.time()), serialization_alias="lastUpdated")
     
 class SessionOut(SessionBase):
     # Add other fields here 
     script:FluencyScript
-    average_score: Optional[float] = None
-    completed: Optional[bool] = None
+    average_score: Optional[float] = Field(default=None, serialization_alias="averageScore")
+    completed: Optional[bool] = Field(default=None, serialization_alias="completed")
     id: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("_id", "id"),
@@ -112,13 +112,13 @@ class ListOfSessionOut(BaseModel):
         serialization_alias="id",
     )
     scenario: ScenarioName
-    totalNumberOfTurns: Optional[int] = None
+    totalNumberOfTurns: Optional[int] = Field(default=None, serialization_alias="totalNumberOfTurns")
     last_updated: Optional[int] = Field(
         default=None,
         validation_alias=AliasChoices("last_updated", "lastUpdated"),
         serialization_alias="lastUpdated",
     )
-    average_score: Optional[float] = None
+    average_score: Optional[float] = Field(default=None, serialization_alias="averageScore")
     script: Optional[FluencyScript] = Field(default=None, exclude=True)
     @model_validator(mode="before")
     @classmethod

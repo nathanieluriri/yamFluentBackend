@@ -163,7 +163,7 @@ async def _call_openai_for_tip(prompt_context: Dict[str, Any]) -> Optional[Dict[
                 ],
                 temperature=0.3,
                 max_tokens=160,
-            ),
+            ), # pyright: ignore[reportUnknownLambdaType]
             estimated_tokens=estimated_tokens,
         )
     except Exception:
@@ -216,6 +216,17 @@ async def generate_or_get_coaching_tip(
     session = await get_session(filter_dict={"_id": ObjectId(session_id), "userId": user_id})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    # Ensure lesson completed: all user turns must have audio + score
+    script = getattr(session, "script", None)
+    turns = getattr(script, "turns", None) or []
+    for turn in turns:
+        if getattr(turn, "role", None) != "user":
+            continue
+        if getattr(turn, "score", None) is None or getattr(turn, "user_audio_url", None) is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Coaching tip unavailable until all user turns have recorded audio and scores.",
+            )
     user_profile = await get_user(filter_dict={"_id": ObjectId(user_id)})
 
     context = _build_prompt_context(user_profile, session)

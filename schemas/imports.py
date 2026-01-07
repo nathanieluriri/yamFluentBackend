@@ -1,5 +1,5 @@
 from bson import ObjectId
-from pydantic import GetJsonSchemaHandler,  field_serializer
+from pydantic import AliasChoices, GetJsonSchemaHandler,  field_serializer
 from pydantic import BaseModel, EmailStr, Field,model_validator
 from pydantic_core import core_schema
 from datetime import datetime,timezone
@@ -10,15 +10,27 @@ from schemas.speech_analysis import TurnSpeechAnalysis
 
 
 class TurnScore(BaseModel):
-    confidence:int
-    fluency:int
-    hesitation:int
+    confidence:int = Field(serialization_alias="confidence")
+    fluency:int = Field(serialization_alias="fluency")
+    hesitation:int = Field(serialization_alias="hesitation")
 class TurnUpdate(BaseModel):
     index: int  # which turn in the list to update
     score:Optional[TurnScore]=None
-    mispronounced_words: Optional[List[str]] = None
-    user_audio_url: Optional[str] = None
-    speech_analysis: Optional[TurnSpeechAnalysis] = None
+    mispronounced_words: Optional[List[str]] = Field(
+        default=None,
+        validation_alias=AliasChoices("mispronounced_words", "mispronouncedWords"),
+        serialization_alias="mispronouncedWords",
+    )
+    user_audio_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("user_audio_url", "userAudioUrl"),
+        serialization_alias="userAudioUrl",
+    )
+    speech_analysis: Optional[TurnSpeechAnalysis] = Field(
+        default=None,
+        validation_alias=AliasChoices("speech_analysis", "speechAnalysis"),
+        serialization_alias="speechAnalysis",
+    )
  
     
 class Turn(BaseModel):
@@ -26,12 +38,28 @@ class Turn(BaseModel):
     score:Optional[TurnScore]=None
     role: Literal["ai", "user"]
     text: str
-    mispronounced_words: Optional[List[str]] = None
+    mispronounced_words: Optional[List[str]] = Field(
+        default=None,
+        validation_alias=AliasChoices("mispronounced_words", "mispronouncedWords"),
+        serialization_alias="mispronouncedWords",
+    )
     # Audio of correct pronunciation (AI voice)
-    model_audio_url: Optional[str]  
+    model_audio_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("model_audio_url", "modelAudioUrl"),
+        serialization_alias="modelAudioUrl",
+    )  
     # Audio recorded by the user (can be null)
-    user_audio_url: Optional[str] = None
-    speech_analysis: Optional[TurnSpeechAnalysis] = None
+    user_audio_url: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("user_audio_url", "userAudioUrl"),
+        serialization_alias="userAudioUrl",
+    )
+    speech_analysis: Optional[TurnSpeechAnalysis] = Field(
+        default=None,
+        validation_alias=AliasChoices("speech_analysis", "speechAnalysis"),
+        serialization_alias="speechAnalysis",
+    )
 
 class AIGeneratedTurns(BaseModel):
 
