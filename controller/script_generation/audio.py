@@ -1,6 +1,7 @@
 import asyncio
 import os
 import uuid
+from typing import List, Optional
 from urllib.parse import unquote, urlparse
 
 from fastapi import HTTPException
@@ -48,7 +49,7 @@ async def upload_audio_bytes(audio_bytes: bytes, key: str) -> str:
     return build_public_r2_url(bucket, key)
 
 
-def _strip_prefix(value: str, prefix: str) -> str | None:
+def _strip_prefix(value: str, prefix: str) -> Optional[str]:
     if not prefix:
         return None
     if value.startswith(prefix):
@@ -56,7 +57,7 @@ def _strip_prefix(value: str, prefix: str) -> str | None:
     return None
 
 
-def _extract_r2_key(audio_url: str) -> str | None:
+def _extract_r2_key(audio_url: str) -> Optional[str]:
     if not audio_url:
         return None
     public_base = os.getenv("CLOUDFLARE_R2_PUBLIC_URL", "").rstrip("/")
@@ -82,7 +83,7 @@ def _extract_r2_key(audio_url: str) -> str | None:
     return audio_url.lstrip("/")
 
 
-async def delete_audio_by_urls(audio_urls: list[str]) -> int:
+async def delete_audio_by_urls(audio_urls: List[str]) -> int:
     bucket = os.getenv("CLOUDFLARE_R2_BUCKET")
     if not bucket:
         return 0

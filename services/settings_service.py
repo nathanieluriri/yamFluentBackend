@@ -22,8 +22,12 @@ from schemas.user_schema import (
     UserPersonalProfilingData,
     UserUpdate,
 )
-from celery_worker import celery_app
-from services.user_service import remove_user, retrieve_user_by_user_id, update_user_by_id
+from services.user_service import (
+    enqueue_user_data_cleanup,
+    remove_user,
+    retrieve_user_by_user_id,
+    update_user_by_id,
+)
 
 
 def _has_profile_updates(profile_updates: ProfileUpdates) -> bool:
@@ -162,23 +166,19 @@ async def reset_user_profile(user_id: str) -> UserOut:
         )
 
     filter_dict = {"_id": ObjectId(user_id)}
-    userOut = await unset_user_fields(
+    user_out = await unset_user_fields(
         filter_dict=filter_dict,
         field_names=["userPersonalProfilingData"],
     )
-    celery_app.send_task(
-      "celery_worker.run_async_task",
-      args=["delete_user_sessions", {"userId": f"{user_id}"}],
-  )
-    
-    celery_app.send_task(
-      "celery_worker.run_async_task",
-      args=["delete_user_coaching_tips", {"userId": f"{user_id}"}],
-  )
-    
-    
-    
-    return userOut
+    notifications = UserNotifications(
+        preference=UserNotificationPreference(enabled=False)
+    )
+    user_out = await update_user_by_id(
+        driver_id=user_id,
+        driver_data=UserUpdate(notifications=notifications),
+    )
+    enqueue_user_data_cleanup(user_id)
+    return user_out
 
 
 

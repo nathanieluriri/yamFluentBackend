@@ -1,6 +1,6 @@
 import jwt
- 
-from datetime import timedelta, timezone,datetime
+
+from datetime import timedelta, timezone, datetime
 from core.database import db
 from dotenv import load_dotenv
 import os
@@ -25,8 +25,16 @@ class JWTPayload(BaseModel):
     exp: datetime
     iat: datetime
 
-SECRET_KEY = "super-secure-secret-key"
 ALGORITHM = "HS256"
+JWT_SECRET_ENV_VARS = ("JWT_SECRET", "SECRET_KEY", "JWT_SECRET_KEY")
+
+
+def _get_jwt_secret() -> str:
+    for env_var in JWT_SECRET_ENV_VARS:
+        value = os.getenv(env_var)
+        if value:
+            return value
+    raise RuntimeError("Missing JWT secret. Set JWT_SECRET or SECRET_KEY.")
 
 async def get_secret_dict()->dict:
     result =await db.secret_keys.find_one({"_id":ObjectId(SECRETID)})
@@ -76,7 +84,7 @@ def create_jwt_token(
 
     token = jwt.encode(
         payload=payload,
-        key=SECRET_KEY,
+        key=_get_jwt_secret(),
         algorithm=ALGORITHM,   # "HS256"
         headers={"typ": "JWT"},
     )
@@ -111,7 +119,7 @@ def create_jwt_admin_token(token: str,userId:str):
         "exp": datetime.now(timezone.utc) + timedelta(minutes=15)
     }
 
-    encoded_jwt = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    encoded_jwt = jwt.encode(payload, _get_jwt_secret(), algorithm="HS256")
     return encoded_jwt
 
 
@@ -132,7 +140,7 @@ async def decode_jwt_token(token: str):
 
     try:
         # Decode and verify
-        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        decoded = jwt.decode(token, _get_jwt_secret(), algorithms=["HS256"])
         return decoded
 
     except jwt.ExpiredSignatureError:
@@ -154,7 +162,7 @@ async def decode_jwt_token(token: str):
 async def decode_jwt_token_without_expiration(token: str):
     try:
         # Try decoding normally (with expiration check)
-        decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        decoded = jwt.decode(token, _get_jwt_secret(), algorithms=["HS256"])
 
         return decoded
     
@@ -163,7 +171,7 @@ async def decode_jwt_token_without_expiration(token: str):
         try:
             # Decode again but skip exp validation
             decoded = jwt.decode(
-                token, SECRET_KEY, algorithms=["HS256"], options={"verify_exp": False}
+                token, _get_jwt_secret(), algorithms=["HS256"], options={"verify_exp": False}
             )
             return decoded
         except Exception as inner_e:

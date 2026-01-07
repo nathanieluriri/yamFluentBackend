@@ -37,7 +37,8 @@ Create a `.env` file in the project root or export variables in your shell.
 Required:
 - `MONGO_URL`
 - `DB_NAME`
-- `SECRETID` (JWT signing secret)
+- `JWT_SECRET` (signing secret for access/admin JWTs)
+- `SECRETID` (ID of JWT key document used for member token secrets)
 - `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`
 - `CELERY_BROKER_URL`, `CELERY_RESULT_BACKEND`
 
@@ -49,6 +50,7 @@ Common optional:
 - `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`
 - `APP_SCHEME` (mobile deep link scheme, default `yamfluent`)
 - `CLOUDFLARE_R2_ENDPOINT`, `CLOUDFLARE_R2_BUCKET`, `CLOUDFLARE_R2_PUBLIC_URL`
+- `JWT_SECRET_KEY` or `SECRET_KEY` (alternate names for JWT signing secret)
 
 ## Local Development
 
@@ -85,6 +87,13 @@ docker compose up -d --build
 
 The API will be available at `http://localhost:7864`.
 
+## Operations
+
+- Run the API, Celery worker, and scheduler for full functionality.
+- Account deletion triggers background cleanup of sessions, coaching tips, and notification device state.
+- Session deletion attempts to remove Cloudflare R2 audio URLs tied to the session.
+- Celery monitoring is available via Flower if enabled in `docker-compose.yml`.
+
 ## API Docs and Health
 
 - Swagger UI: `http://localhost:7864/docs`
@@ -96,4 +105,3 @@ The API will be available at `http://localhost:7864`.
 ```bash
 pytest -q
 ```
-

@@ -1,5 +1,6 @@
 
 import asyncio
+import logging
 import re
 import secrets
 from datetime import datetime, timedelta
@@ -28,11 +29,9 @@ import httpx
 
 from services.email_service import send_password_reset_link
 from core.redis_cache import cache_get_json, cache_set_json
-from celery_worker import celery_app
-
-
 load_dotenv()
 
+logger = logging.getLogger(__name__)
  
 oauth = OAuth()  # type: ignore
 oauth.register(
@@ -147,19 +146,11 @@ async def remove_user(user_id: str):
 
     filter_dict = {"_id": ObjectId(user_id)}
     result = await delete_user(filter_dict)
-    await celery_app.send_task("celery_worker.run_async_task", args=["delete_tokens", {"userId": user_id}])
-    celery_app.send_task(
-      "celery_worker.run_async_task",
-      args=["delete_user_sessions", {"userId": f"{user_id}"}],
-  )
-    
-    celery_app.send_task( 
-      "celery_worker.run_async_task",
-      args=["delete_user_coaching_tips", {"userId": f"{user_id}"}],
-  )
-    
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
+    await delete_all_tokens_with_user_id(userId=user_id)
+    enqueue_user_data_cleanup(user_id)
+    return True
 
 
 async def retrieve_user_by_user_id(id: str) -> UserOut:
@@ -257,6 +248,29 @@ async def logout_user(user_id: str):
 
 
 
+
+
+def enqueue_user_data_cleanup(user_id: str) -> None:
+    from celery_worker import celery_app
+
+    tasks = [
+        "delete_user_sessions",
+        "delete_user_coaching_tips",
+        "delete_user_device_states",
+    ]
+    for task_name in tasks:
+        try:
+            celery_app.send_task(
+                "celery_worker.run_async_task",
+                args=[task_name, {"userId": user_id}],
+            )
+        except Exception as exc:
+            logger.warning(
+                "Failed to enqueue user cleanup task %s for user %s: %s",
+                task_name,
+                user_id,
+                exc,
+            )
 
 
 RESET_TOKEN_TTL_SECONDS = 15 * 60

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query, status
 
 from schemas.response_schema import APIResponse
@@ -15,7 +17,7 @@ router = APIRouter(prefix="/settings", tags=["Settings"])
 
 @router.get("/", response_model=APIResponse[SettingsView])
 async def get_user_settings(
-    device_id: str | None = Query(
+    device_id: Optional[str] = Query(
         default=None,
         description="Optional device ID to compute per-device notification status.",
     ),

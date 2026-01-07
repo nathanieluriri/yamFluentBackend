@@ -37,3 +37,8 @@ async def get_device_state(
     if not result:
         return None
     return DevicePushStateView(**result)
+
+
+async def delete_device_states_for_user(user_id: str) -> int:
+    result = await db.notification_devices.delete_many({"userId": user_id})
+    return int(result.deleted_count)
