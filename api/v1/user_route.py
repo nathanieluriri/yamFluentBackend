@@ -95,7 +95,7 @@ async def mobile_auth_callback_user(request: Request):
             refresh_token = data.refresh_token
 
         success_url = (
-            f"yamfluent://auth/callback?access_token={access_token}&refresh_token={refresh_token}"
+            f"yamfluent://auth/callback?accessToken={access_token}&refreshToken={refresh_token}"
         )
 
         return RedirectResponse(
