@@ -89,6 +89,17 @@ async def update_coaching_tip_feedback(
     return CoachingTipResponse(**updated) if updated else None
 
 
+async def delete_coaching_tip_by_id(
+    *, tip_id: str, user_id: str
+) -> bool:
+    if not ObjectId.is_valid(tip_id):
+        return False
+    result = await db[COLLECTION_NAME].delete_one(
+        {"_id": ObjectId(tip_id), "user_id": user_id}
+    )
+    return bool(result.deleted_count)
+
+
 __all__ = [
     "COLLECTION_NAME",
     "ensure_coaching_tip_indexes",
@@ -97,5 +108,6 @@ __all__ = [
     "get_coaching_tip_by_id",
     "list_coaching_tips",
     "update_coaching_tip_feedback",
+    "delete_coaching_tip_by_id",
     "DuplicateKeyError",
 ]

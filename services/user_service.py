@@ -28,6 +28,7 @@ import httpx
 
 from services.email_service import send_password_reset_link
 from core.redis_cache import cache_get_json, cache_set_json
+from celery_worker import celery_app
 
 
 load_dotenv()
@@ -146,8 +147,17 @@ async def remove_user(user_id: str):
 
     filter_dict = {"_id": ObjectId(user_id)}
     result = await delete_user(filter_dict)
-    await delete_all_tokens_with_user_id(userId=user_id)
-
+    await celery_app.send_task("celery_worker.run_async_task", args=["delete_tokens", {"userId": user_id}])
+    celery_app.send_task(
+      "celery_worker.run_async_task",
+      args=["delete_user_sessions", {"userId": f"{user_id}"}],
+  )
+    
+    celery_app.send_task( 
+      "celery_worker.run_async_task",
+      args=["delete_user_coaching_tips", {"userId": f"{user_id}"}],
+  )
+    
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -190,7 +200,6 @@ async def update_user_by_id(driver_id: str, driver_data: UserUpdate,is_password_
         HTTPException 400(not found): Invalid driver ID format
 
     Returns:
-        _type_: DriverOut
     """
     from celery_worker import celery_app
     if not ObjectId.is_valid(driver_id):

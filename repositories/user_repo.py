@@ -1,4 +1,6 @@
 
+import time
+
 from pymongo import ReturnDocument
 from core.database import db
 from fastapi import HTTPException,status
@@ -56,6 +58,20 @@ async def update_user(filter_dict: dict, user_data: UserUpdate) -> UserOut:
         filter_dict,
         {"$set": user_data.model_dump(exclude_none=True)},
         return_document=ReturnDocument.AFTER
+    )
+    returnable_result = UserOut(**result)
+    return returnable_result
+
+
+async def unset_user_fields(filter_dict: dict, field_names: List[str]) -> UserOut:
+    unset_payload = {field_name: "" for field_name in field_names}
+    result = await db.users.find_one_and_update(
+        filter_dict,
+        {
+            "$unset": unset_payload,
+            "$set": {"last_updated": int(time.time())},
+        },
+        return_document=ReturnDocument.AFTER,
     )
     returnable_result = UserOut(**result)
     return returnable_result

@@ -165,10 +165,10 @@ async def logout_user(
 
 
 
-@router.delete("/account",dependencies=[Depends(verify_token_user_role)])
-async def delete_user_account(token:accessTokenOut = Depends(verify_token_user_role)):
-    result = await remove_user(user_id=token.userId)
-    return result
+# @router.delete("/account",dependencies=[Depends(verify_token_user_role)])
+# async def delete_user_account(token:accessTokenOut = Depends(verify_token_user_role)):
+#     result = await remove_user(user_id=token.userId)
+#     return result
 
 
 

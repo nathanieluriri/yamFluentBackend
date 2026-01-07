@@ -15,6 +15,7 @@ from controller.script_generation.clients import (
 from repositories.coaching_tips import (
     DuplicateKeyError,
     create_coaching_tip,
+    delete_coaching_tip_by_id,
     ensure_coaching_tip_indexes,
     get_coaching_tip_by_id,
     get_coaching_tip_by_session,
@@ -280,3 +281,25 @@ async def get_user_coaching_tip_by_id(
     if not tip:
         raise HTTPException(status_code=404, detail="Coaching tip not found")
     return tip
+
+
+async def delete_coaching_tips_for_user(userId: str, batch_size: int = 100) -> int:
+    deleted = 0
+    while True:
+        tips = await list_coaching_tips(user_id=userId, start=0, stop=batch_size)
+        if not tips:
+            break
+        for tip in tips:
+            tip_id = getattr(tip, "id", None)
+            if not tip_id:
+                continue
+            try:
+                removed = await delete_coaching_tip_by_id(
+                    tip_id=tip_id,
+                    user_id=userId,
+                )
+                if removed:
+                    deleted += 1
+            except Exception:
+                continue
+    return deleted

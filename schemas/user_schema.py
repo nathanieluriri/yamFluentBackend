@@ -47,6 +47,8 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     # Add other fields here 
     password: Optional[str | bytes] = None
+    notifications: Optional["UserNotifications"] = None
+    userPersonalProfilingData: Optional["UserPersonalProfilingData"] = None
     last_updated: int = Field(default_factory=lambda: int(time.time()))
     @model_validator(mode='after')
     def obscure_password(self):
@@ -76,6 +78,16 @@ class UserPersonalProfilingData(BaseModel):
         return v
     
     
+class UserNotificationPreference(BaseModel):
+    enabled: bool = False
+
+
+class UserNotifications(BaseModel):
+    preference: UserNotificationPreference = Field(
+        default_factory=UserNotificationPreference
+    )
+
+
 class UserUpdateProfile(BaseModel):
     # Add other fields here 
     userPersonalProfilingData:Optional[UserPersonalProfilingData]=None
@@ -226,6 +238,7 @@ class UserOut(UserBase):
     loginType:Optional[LoginType]=None
     userPersonalProfilingData:Optional[UserPersonalProfilingData]=None
     onboardingCompleted:Optional[bool]=False
+    notifications: Optional[UserNotifications] = None
     avatarUrl:str =Field(default="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS6LXNJFTmLzCoExghcATlCWG85kI8dsnhJng&s")
     id: Optional[str] = Field(
         default=None,

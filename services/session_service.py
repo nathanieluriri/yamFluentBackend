@@ -15,6 +15,7 @@ from controller.session import (
     calculate_turn_score,
     schedule_cleanup_incomplete_session,
 )
+from controller.script_generation.audio import delete_audio_by_urls
 from repositories.session import (
     create_session,
     get_session,
@@ -59,13 +60,33 @@ async def remove_session(session_id: str,user_id:str):
     if not ObjectId.is_valid(session_id):
         raise HTTPException(status_code=400, detail="Invalid session ID format")
 
-    filter_dict = {"_id": ObjectId(session_id),"userId":user_id}
+    filter_dict = {"_id": ObjectId(session_id), "userId": user_id}
+    session = await get_session(filter_dict)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
     result = await delete_session(filter_dict)
 
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    else: return True
+    audio_urls = set()
+    script = getattr(session, "script", None)
+    turns = getattr(script, "turns", None) if script else None
+    if turns:
+        for turn in turns:
+            model_audio = getattr(turn, "model_audio_url", None)
+            user_audio = getattr(turn, "user_audio_url", None)
+            if model_audio:
+                audio_urls.add(model_audio)
+            if user_audio:
+                audio_urls.add(user_audio)
+    if audio_urls:
+        try:
+            await delete_audio_by_urls(list(audio_urls))
+        except Exception:
+            pass
+
+    return True
     
     
     
@@ -101,6 +122,28 @@ async def retrieve_sessions(user_id:str,start=0,stop=100,filters:dict=None) -> L
         filters = {}
     filters["userId"] =user_id
     return await get_sessions(filter_dict=filters,start=start,stop=stop)
+
+
+async def delete_sessions_for_user(userId: str, batch_size: int = 100) -> int:
+    """
+    Deletes all sessions for a given user by listing sessions and removing them one by one.
+    Intended for async execution via the celery run_async_task worker.
+    """
+    deleted = 0
+    while True:
+        sessions = await retrieve_sessions(user_id=userId, start=0, stop=batch_size)
+        if not sessions:
+            break
+        for session in sessions:
+            session_id = getattr(session, "id", None)
+            if not session_id:
+                continue
+            try:
+                await remove_session(session_id=session_id, user_id=userId)
+                deleted += 1
+            except HTTPException:
+                continue
+    return deleted
 
 
 async def retrieve_session_summaries(

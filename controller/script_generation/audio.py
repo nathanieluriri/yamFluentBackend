@@ -1,6 +1,7 @@
 import asyncio
 import os
 import uuid
+from urllib.parse import unquote, urlparse
 
 from fastapi import HTTPException
 from openai import AsyncOpenAI
@@ -47,6 +48,59 @@ async def upload_audio_bytes(audio_bytes: bytes, key: str) -> str:
     return build_public_r2_url(bucket, key)
 
 
+def _strip_prefix(value: str, prefix: str) -> str | None:
+    if not prefix:
+        return None
+    if value.startswith(prefix):
+        return value[len(prefix):].lstrip("/")
+    return None
+
+
+def _extract_r2_key(audio_url: str) -> str | None:
+    if not audio_url:
+        return None
+    public_base = os.getenv("CLOUDFLARE_R2_PUBLIC_URL", "").rstrip("/")
+    endpoint = os.getenv("CLOUDFLARE_R2_ENDPOINT", "").rstrip("/")
+    bucket = os.getenv("CLOUDFLARE_R2_BUCKET", "")
+
+    key = _strip_prefix(audio_url, public_base)
+    if key is not None:
+        return unquote(key)
+
+    if endpoint and bucket:
+        key = _strip_prefix(audio_url, f"{endpoint}/{bucket}")
+        if key is not None:
+            return unquote(key)
+
+    parsed = urlparse(audio_url)
+    if parsed.scheme:
+        path = parsed.path.lstrip("/")
+        if bucket and path.startswith(f"{bucket}/"):
+            return unquote(path[len(bucket) + 1 :])
+        return unquote(path) if path else None
+
+    return audio_url.lstrip("/")
+
+
+async def delete_audio_by_urls(audio_urls: list[str]) -> int:
+    bucket = os.getenv("CLOUDFLARE_R2_BUCKET")
+    if not bucket:
+        return 0
+    client = get_r2_client()
+    deleted = 0
+    for audio_url in audio_urls:
+        key = _extract_r2_key(audio_url)
+        if not key:
+            continue
+        await asyncio.to_thread(
+            client.delete_object,
+            Bucket=bucket,
+            Key=key,
+        )
+        deleted += 1
+    return deleted
+
+
 async def generate_audio_url(
     client: AsyncOpenAI,
     text: str,
@@ -61,7 +115,7 @@ async def generate_audio_url(
             voice=voice,
             input=text,
             response_format="mp3",
-        ),
+        ), # pyright: ignore[reportUnknownLambdaType]
         estimated_tokens=estimated_tokens,
     )
     response_url = getattr(response, "url", None)
