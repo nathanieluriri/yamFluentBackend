@@ -27,3 +27,4 @@ authlib
 celery-aio-pool
 boto3
 openai
+pytest

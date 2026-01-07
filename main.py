@@ -520,14 +520,12 @@ async def health_check():
 
 # --- auto-routes-start ---
 from api.v1.admin_route import router as v1_admin_route_router
- 
+from api.v1.coaching_tips import router as v1_coaching_tips_router
+from api.v1.session import router as v1_session_route_router
 from api.v1.user_route import router as v1_user_route_router
 
-from api.v1.session import router as v1_session_route_router
-
 app.include_router(v1_admin_route_router, prefix='/v1',include_in_schema=False)
- 
 app.include_router(v1_user_route_router, prefix='/v1')
-
 app.include_router(v1_session_route_router, prefix='/users/v1')
+app.include_router(v1_coaching_tips_router, prefix='/users/v1')
 # --- auto-routes-end ---

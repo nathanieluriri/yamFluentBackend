@@ -6,6 +6,7 @@ from datetime import datetime,timezone
 from typing import Optional,List,Any,Literal
 from enum import Enum
 import time
+from schemas.speech_analysis import TurnSpeechAnalysis
 
 
 class TurnScore(BaseModel):
@@ -17,6 +18,7 @@ class TurnUpdate(BaseModel):
     score:Optional[TurnScore]=None
     mispronounced_words: Optional[List[str]] = None
     user_audio_url: Optional[str] = None
+    speech_analysis: Optional[TurnSpeechAnalysis] = None
  
     
 class Turn(BaseModel):
@@ -29,6 +31,7 @@ class Turn(BaseModel):
     model_audio_url: Optional[str]  
     # Audio recorded by the user (can be null)
     user_audio_url: Optional[str] = None
+    speech_analysis: Optional[TurnSpeechAnalysis] = None
 
 class AIGeneratedTurns(BaseModel):
 

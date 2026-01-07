@@ -1,58 +1,111 @@
-# ============================================================================
-#COACHING_TIPS SCHEMA 
-# ============================================================================
-# This file was auto-generated on: 2026-01-06 22:00:33 WAT
-# It contains Pydantic classes  database
-# for managing attributes and validation of data in and out of the MongoDB database.
-#
-# ============================================================================
+from __future__ import annotations
 
-from schemas.imports import *
-from pydantic import AliasChoices, Field
 import time
+from typing import Any, Dict, List, Optional
 
-class CoachingTipsBase(BaseModel):
-    # Add other fields here 
-    feedback:Optional[Any]=None
-    pass
+from bson import ObjectId
+from pydantic import AliasChoices, BaseModel, Field, model_validator
 
-class CoachingTipsCreate(CoachingTipsBase):
-    # Add other fields here 
-    date_created: int = Field(default_factory=lambda: int(time.time()))
-    last_updated: int = Field(default_factory=lambda: int(time.time()))
 
-class CoachingTipsUpdate(BaseModel):
-    # Add other fields here 
-    last_updated: int = Field(default_factory=lambda: int(time.time()))
+class CoachingTipCreateRequest(BaseModel):
+    session_id: str = Field(
+        ...,
+        validation_alias=AliasChoices("session_id", "sessionId"),
+        serialization_alias="session_id",
+    )
 
-class CoachingTipsOut(CoachingTipsBase):
-    # Add other fields here 
+
+class CoachingTipCreate(BaseModel):
+    session_id: str
+    user_id: str
+    tip_text: str
+    practice_words: Optional[List[str]] = None
+    provider_meta: Dict[str, Any] = Field(default_factory=dict)
+    feedback: Dict[str, Any] = Field(default_factory=dict)
+    prompt_version: str = "v1"
+    created_at: int = Field(default_factory=lambda: int(time.time()))
+
+
+class CoachingTipResponse(BaseModel):
     id: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("_id", "id"),
         serialization_alias="id",
     )
-    date_created: Optional[int] = Field(
-        default=None,
-        validation_alias=AliasChoices("date_created", "dateCreated"),
-        serialization_alias="dateCreated",
+    session_id: str = Field(
+        ...,
+        validation_alias=AliasChoices("session_id", "sessionId"),
+        serialization_alias="session_id",
     )
-    last_updated: Optional[int] = Field(
-        default=None,
-        validation_alias=AliasChoices("last_updated", "lastUpdated"),
-        serialization_alias="lastUpdated",
+    user_id: str = Field(
+        ...,
+        validation_alias=AliasChoices("user_id", "userId"),
+        serialization_alias="user_id",
     )
-    
+    created_at: int = Field(
+        ...,
+        validation_alias=AliasChoices("created_at", "createdAt"),
+        serialization_alias="created_at",
+    )
+    tip_text: str
+    practice_words: Optional[List[str]] = None
+    provider_meta: Dict[str, Any] = Field(default_factory=dict)
+    feedback: Dict[str, Any] = Field(default_factory=dict)
+    prompt_version: str = "v1"
+
     @model_validator(mode="before")
     @classmethod
     def convert_objectid(cls, values):
+        if values is None:
+            return values
         if "_id" in values and isinstance(values["_id"], ObjectId):
-            values["_id"] = str(values["_id"])  # coerce to string before validation
+            values["id"] = str(values["_id"])
+        elif "_id" in values and values.get("id") is None:
+            values["id"] = str(values["_id"])
         return values
-            
-    class Config:
-        populate_by_name = True  # allows using `id` when constructing the model
-        arbitrary_types_allowed = True  # allows ObjectId type
-        json_encoders ={
-            ObjectId: str  # automatically converts ObjectId → str
-        }
+
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {ObjectId: str},
+    }
+
+
+class CoachingTipListItem(BaseModel):
+    id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("_id", "id"),
+        serialization_alias="id",
+    )
+    session_id: str = Field(
+        ...,
+        validation_alias=AliasChoices("session_id", "sessionId"),
+        serialization_alias="session_id",
+    )
+    created_at: int = Field(
+        ...,
+        validation_alias=AliasChoices("created_at", "createdAt"),
+        serialization_alias="created_at",
+    )
+    preview: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def convert_objectid(cls, values):
+        if values is None:
+            return values
+        if "_id" in values and isinstance(values["_id"], ObjectId):
+            values["id"] = str(values["_id"])
+        elif "_id" in values and values.get("id") is None:
+            values["id"] = str(values["_id"])
+        return values
+
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {ObjectId: str},
+    }
+
+
+class CoachingTipListResponse(BaseModel):
+    items: List[CoachingTipListItem]

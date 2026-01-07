@@ -137,16 +137,13 @@ async def update_session_by_id(session_id: str,user_id:str,turn_index:int,audio:
     current_turn = turns[turn_index]
     if getattr(current_turn, "role", None) != "user":
         raise HTTPException(status_code=400, detail="Turn index does not correspond to a user turn.")
-    if getattr(current_turn, "score", None) is not None:
-        return existing_session
-
     score = await calculate_turn_score(
         session_id=session_id,
         user_id=user_id,
         turn_index=turn_index,
         audio=audio,
         session=existing_session,
-        debug=True,
+        debug=False,
     )
     filter_dict = {"_id": ObjectId(session_id)}
     result = await update_session(filter_dict, score)

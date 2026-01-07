@@ -6,6 +6,8 @@ from controller.grading.text_align import (
     normalized_edit_distance,
 )
 
+MISPRONOUNCED_THRESHOLD = 0.4
+
 
 def clamp(value: int, minimum: int = 0, maximum: int = 100) -> int:
     return max(minimum, min(maximum, value))
@@ -43,7 +45,7 @@ def build_mispronounced_words(
             continue
         if expected_word == actual_word:
             continue
-        if normalized_edit_distance(expected_word, actual_word) <= 0.4:
+        if normalized_edit_distance(expected_word, actual_word) <= MISPRONOUNCED_THRESHOLD:
             if expected_word not in seen:
                 seen.add(expected_word)
                 mispronounced.append(expected_word)

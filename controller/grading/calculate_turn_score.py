@@ -5,8 +5,9 @@ from typing import Any, Dict, Optional, Union
 from bson import ObjectId
 from fastapi import HTTPException, UploadFile
 
-from controller.grading.scoring import compute_scores
+from controller.grading.scoring import MISPRONOUNCED_THRESHOLD, compute_scores
 from controller.grading.text_align import tokenize
+from controller.grading.speech_analysis_builder import build_speech_analysis
 from controller.script_generation.audio import upload_audio_bytes
 from controller.script_generation.clients import (
     get_openai_client,
@@ -23,7 +24,7 @@ async def _audio_to_bytes(audio: Union[bytes, UploadFile]) -> bytes:
     return await audio.read()
 
 
-async def _run_asr(audio_bytes: bytes) -> str:
+async def _run_asr(audio_bytes: bytes) -> tuple[str, Dict[str, Any]]:
     client = get_openai_client()
     model_name = os.getenv("OPENAI_ASR_MODEL", "gpt-4o-mini-transcribe")
     audio_file = io.BytesIO(audio_bytes)
@@ -42,7 +43,11 @@ async def _run_asr(audio_bytes: bytes) -> str:
         transcript = response.get("text") if isinstance(response, dict) else None
     if not transcript:
         raise HTTPException(status_code=500, detail="ASR failed to return transcript text.")
-    return str(transcript).strip()
+    meta: Dict[str, Any] = {
+        "model": model_name,
+        "estimated_tokens": estimated_tokens,
+    }
+    return str(transcript).strip(), meta
 
 
 def _get_session_turn(session: Any, turn_index: int):
@@ -92,7 +97,7 @@ async def calculate_turn_score(
     audio_bytes = await _audio_to_bytes(audio)
     if not audio_bytes:
         raise HTTPException(status_code=400, detail="Audio upload is empty.")
-    transcript_text = await _run_asr(audio_bytes)
+    transcript_text, asr_meta = await _run_asr(audio_bytes)
 
     expected_tokens = tokenize(expected_text)
     actual_tokens = tokenize(transcript_text)
@@ -106,6 +111,18 @@ async def calculate_turn_score(
         _alignment,
         mispronounced_words,
     ) = compute_scores(expected_tokens, actual_tokens, leniency)
+
+    speech_analysis = build_speech_analysis(
+        expected_text=expected_text,
+        asr_text=transcript_text,
+        expected_tokens=expected_tokens,
+        actual_tokens=actual_tokens,
+        alignment=_alignment,
+        mispronounced_words=mispronounced_words,
+        threshold=MISPRONOUNCED_THRESHOLD,
+        asr_model=asr_meta.get("model"),
+        asr_parameters=asr_meta,
+    )
 
     user_audio_url: Optional[str] = None
     if audio_bytes:
@@ -128,6 +145,7 @@ async def calculate_turn_score(
                     mispronounced_words=mispronounced_words or None,
                     
                     user_audio_url=user_audio_url,
+                    speech_analysis=speech_analysis,
                 )
             ]
         )
@@ -149,6 +167,7 @@ async def calculate_turn_score(
                 "wer": wer,
                 "filler_count": filler_count,
                 "total_tokens": total_tokens,
+                "speech_analysis": speech_analysis.model_dump(),
             }
         )
         
