@@ -172,20 +172,29 @@ def send_password_reset_link(user_email: str, link: str):
 
 
 
-def send_invite_notification(invitee_email: str, inviter_email:str,):
+def send_invite_notification(invitee_email: str, inviter_email:str,password:str):
     """Sends invite"""
     try:
         html_body = generate_invitation_email_from_template(
-            invitee_email=invitee_email,inviter_email=inviter_email,project_name="", register_link=""
+            invitee_email=invitee_email,
+            inviter_email=inviter_email,
+            invitee_password=password,
+            portal_name="Yam Fluent Admin Portal"
         )
 
-        plain_text = f"""Hello, {invitee_email} you have been invited to use Aperture Security EPS Booking Admin Portal """
+        plain_text = (
+            "You have been invited to the Yam Fluent Admin Portal.\n\n"
+            f"Inviter: {inviter_email}\n"
+            f"Invitee: {invitee_email}\n"
+            f"Temporary password: {password}\n\n"
+            "Please sign in and change your password immediately."
+        )
 
         send_html_email_optimized(
             sender_email=EMAIL_USERNAME,
-            sender_display_name="Aperture Security",
+            sender_display_name="Yam Fluent",
             receiver_email=invitee_email,
-            subject="Admin App Invitation",
+            subject="Yam Fluent Admin Invitation",
             html_content=html_body,
             plain_text_content=plain_text,
             smtp_server=EMAIL_HOST,

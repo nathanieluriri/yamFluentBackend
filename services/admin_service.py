@@ -15,9 +15,10 @@ from security.hash import check_password
 from repositories.tokens_repo import add_refresh_tokens, add_admin_access_tokens, accessTokenCreate,accessTokenOut,refreshTokenCreate
 from repositories.tokens_repo import get_refresh_tokens,get_access_tokens,delete_access_token,delete_refresh_token,delete_all_tokens_with_admin_id
 from security.encrypting_jwt import create_jwt_admin_token
+from services.email_service import send_invite_notification
 
 
-async def add_admin(admin_data: AdminCreate) -> AdminOut:
+async def add_admin(admin_data: AdminCreate,password:str) -> AdminOut:
     """adds an entry of AdminCreate to the database and returns an object
 
     Returns:
@@ -25,11 +26,13 @@ async def add_admin(admin_data: AdminCreate) -> AdminOut:
     """
     admin =  await get_admin(filter_dict={"email":admin_data.email})
     if admin==None:
+        inviter = await retrieve_admin_by_admin_id(id=admin_data.invited_by)
+        send_invite_notification(invitee_email=admin_data.email,inviter_email=inviter.email,password=password)
         new_admin= await create_admin(admin_data)
         access_token = await add_admin_access_tokens(token_data=accessTokenCreate(userId=new_admin.id))
         refresh_token  = await add_refresh_tokens(token_data=refreshTokenCreate(userId=new_admin.id,previousAccessToken=access_token.accesstoken))
         new_admin.password=""
-        new_admin.access_token= await create_jwt_admin_token(token=access_token.accesstoken,userId=new_admin.id)
+        new_admin.access_token= create_jwt_admin_token(token=access_token.accesstoken,userId=new_admin.id)
         new_admin.refresh_token = refresh_token.refreshtoken
         return new_admin
     else:
@@ -43,7 +46,7 @@ async def authenticate_admin(admin_data:AdminBase )->AdminOut:
             admin.password=""
             access_token = await add_admin_access_tokens(token_data=accessTokenCreate(userId=admin.id))
             refresh_token  = await add_refresh_tokens(token_data=refreshTokenCreate(userId=admin.id,previousAccessToken=access_token.accesstoken))
-            admin.access_token=  await create_jwt_admin_token(token=access_token.accesstoken,userId=admin.id)
+            admin.access_token=  create_jwt_admin_token(token=access_token.accesstoken,userId=admin.id)
             admin.refresh_token = refresh_token.refreshtoken
             return admin
         else:
@@ -62,7 +65,7 @@ async def refresh_admin_tokens_reduce_number_of_logins(admin_refresh_data:AdminR
                     access_token = await add_admin_access_tokens(token_data=accessTokenCreate(userId=admin.id))
                     refresh_token  = await add_refresh_tokens(token_data=refreshTokenCreate(userId=admin.id,previousAccessToken=access_token.accesstoken))
                     
-                    admin.access_token= await create_jwt_admin_token(token=access_token.accesstoken,userId=refreshObj.userId) 
+                    admin.access_token= create_jwt_admin_token(token=access_token.accesstoken,userId=refreshObj.userId) 
                     admin.refresh_token = refresh_token.refreshtoken
                     await delete_access_token(accessToken=expired_access_token)
                     await delete_refresh_token(refreshToken=admin_refresh_data.refresh_token)

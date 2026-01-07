@@ -26,6 +26,7 @@ from services.admin_service import (
     refresh_admin_tokens_reduce_number_of_logins,
 
 )
+from services.email_service import send_invite_notification
 from security.auth import verify_token_to_refresh,verify_admin_token
 from services.session_service import remove_session, retrieve_sessions
 router = APIRouter(prefix="/admins", tags=["Admins"])
@@ -111,7 +112,9 @@ async def signup_new_admin(
       invited_by=token.get("userId"),
         **admin_data_dict
     )
-    items = await add_admin(admin_data=new_admin)
+    items = await add_admin(admin_data=new_admin,password=admin_data_dict['password'])
+    
+    
     return APIResponse(status_code=200, data=items, detail="Fetched successfully")
 
 @router.post("/login",response_model_exclude={"data": {"password"}}, response_model_exclude_none=True,response_model=APIResponse[AdminOut])

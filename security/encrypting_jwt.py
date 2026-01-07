@@ -103,7 +103,7 @@ async def create_jwt_member_token(token):
 
     return token
 
-async def create_jwt_admin_token(token: str,userId:str):
+def create_jwt_admin_token(token: str,userId:str):
     payload = {
         "accessToken": token,
         "role": "admin",
