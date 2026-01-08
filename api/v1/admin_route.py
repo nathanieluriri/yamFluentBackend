@@ -1,5 +1,5 @@
 
-from fastapi import APIRouter, HTTPException, Query, status, Path,Depends,Body
+from fastapi import APIRouter, HTTPException, Query, status, Path, Request, Depends, Body
 from typing import List,Annotated, Optional
 from schemas.imports import ScenarioName
 from schemas.response_schema import APIResponse
@@ -30,6 +30,28 @@ from services.email_service import send_invite_notification
 from security.auth import verify_token_to_refresh,verify_admin_token
 from services.session_service import remove_session, retrieve_sessions
 router = APIRouter(prefix="/admins", tags=["Admins"])
+
+
+def _base_url_from_request(request: Request) -> str:
+    return str(request.url_for("read_root")).rstrip("/")
+
+
+def _absolute_audio_urls(sessions: List[SessionOut], base_url: str) -> List[SessionOut]:
+    updated = []
+    for session in sessions:
+        copy = session.model_copy(deep=True)
+        script = getattr(copy, "script", None)
+        turns = getattr(script, "turns", None) if script else None
+        if turns:
+            for turn in turns:
+                model_audio_url = getattr(turn, "model_audio_url", None)
+                if isinstance(model_audio_url, str) and model_audio_url.startswith("/"):
+                    turn.model_audio_url = f"{base_url}{model_audio_url}"
+                user_audio_url = getattr(turn, "user_audio_url", None)
+                if isinstance(user_audio_url, str) and user_audio_url.startswith("/"):
+                    turn.user_audio_url = f"{base_url}{user_audio_url}"
+        updated.append(copy)
+    return updated
             
  
 
@@ -283,6 +305,7 @@ async def delete_session(id: str = Path(..., description="ID of the session to d
 # ------------------------------
 @router.get("/", response_model=APIResponse[List[SessionOut]],dependencies=[Depends(verify_admin_token)],)
 async def list_sessions(
+    request: Request,
     start: Optional[int] = Query(None, description="Start index for range-based pagination"),
     stop: Optional[int] = Query(None, description="Stop index for range-based pagination"),
     page_number: Optional[int] = Query(None, description="Page number for page-based pagination (0-indexed)"),
@@ -325,6 +348,8 @@ async def list_sessions(
         
         # Pass filters to the service layer
         items = await retrieve_sessions(filters=parsed_filters, start=start, stop=stop,user_id=user_id)
+        base_url = _base_url_from_request(request)
+        items = _absolute_audio_urls(items, base_url)
         return APIResponse(status_code=200, data=items, detail="Fetched successfully")
 
     # Case 2: Use page_number if provided
@@ -336,12 +361,16 @@ async def list_sessions(
         stop_index = start_index + PAGE_SIZE
         # Pass filters to the service layer
         items = await retrieve_sessions(filters=parsed_filters, start=start_index, stop=stop_index,user_id=user_id)
+        base_url = _base_url_from_request(request)
+        items = _absolute_audio_urls(items, base_url)
         return APIResponse(status_code=200, data=items, detail=f"Fetched page {page_number} successfully")
 
     # Case 3: Default (no params)
     else:
         # Pass filters to the service layer
         items = await retrieve_sessions(filters=parsed_filters, start=0, stop=100,user_id=user_id)
+        base_url = _base_url_from_request(request)
+        items = _absolute_audio_urls(items, base_url)
         detail_msg = "Fetched first 100 records successfully"
         if parsed_filters:
             # If filters were applied, adjust the detail message

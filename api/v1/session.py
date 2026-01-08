@@ -44,6 +44,26 @@ from controller.script_generation.clients import get_openai_client
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
 
 
+def _base_url_from_request(request: Request) -> str:
+    return str(request.url_for("read_root")).rstrip("/")
+
+
+def _absolute_audio_urls(session: SessionOut, base_url: str) -> SessionOut:
+    copy = session.model_copy(deep=True)
+    script = getattr(copy, "script", None)
+    turns = getattr(script, "turns", None) if script else None
+    if not turns:
+        return copy
+    for turn in turns:
+        model_audio_url = getattr(turn, "model_audio_url", None)
+        if isinstance(model_audio_url, str) and model_audio_url.startswith("/"):
+            turn.model_audio_url = f"{base_url}{model_audio_url}"
+        user_audio_url = getattr(turn, "user_audio_url", None)
+        if isinstance(user_audio_url, str) and user_audio_url.startswith("/"):
+            turn.user_audio_url = f"{base_url}{user_audio_url}"
+    return copy
+
+
 # ------------------------------
 # List Sessions (with pagination and filtering)
 # ------------------------------
@@ -119,6 +139,7 @@ async def list_sessions(
 # ------------------------------
 @router.get("/{id}",dependencies=[Depends(verify_token_user_role)], response_model=APIResponse[SessionOut])
 async def get_session_by_id(
+    request: Request,
     id: str = Path(..., description="session ID to fetch specific item"),
      token:accessTokenOut = Depends(verify_token_user_role)
 ):
@@ -128,6 +149,8 @@ async def get_session_by_id(
     item = await retrieve_session_by_session_id(id=id,user_id=token.userId)
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session not found")
+    base_url = _base_url_from_request(request)
+    item = _absolute_audio_urls(item, base_url)
     return APIResponse(status_code=200, data=item, detail="session item fetched")
 
 
@@ -136,7 +159,11 @@ async def get_session_by_id(
 # ------------------------------
 # Uses SessionBase for input (correctly)
 @router.post("/", dependencies=[Depends(verify_token_user_role)], response_model=APIResponse[SessionOut], status_code=status.HTTP_201_CREATED)
-async def create_session(payload: SessionBaseRequest,token:accessTokenOut = Depends(verify_token_user_role)):
+async def create_session(
+    request: Request,
+    payload: SessionBaseRequest,
+    token:accessTokenOut = Depends(verify_token_user_role)
+):
     """
     Creates a new Session.
     """
@@ -146,6 +173,8 @@ async def create_session(payload: SessionBaseRequest,token:accessTokenOut = Depe
     if not new_item:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Failed to create session")
     
+    base_url = _base_url_from_request(request)
+    new_item = _absolute_audio_urls(new_item, base_url)
     return APIResponse(status_code=201, data=new_item, detail=f"Session created successfully")
 
 
@@ -155,6 +184,7 @@ async def create_session(payload: SessionBaseRequest,token:accessTokenOut = Depe
 # Uses PATCH for partial update (correctly)
 @router.patch("/{id}/{turn_index}", response_model=APIResponse[SessionOut])
 async def users_turn_to_speak(
+    request: Request,
     turn_index:int,
     id: str = Path(..., description="ID of the {db_name} to update"),
     audio: UploadFile = File(..., description="User audio MP3"),
@@ -175,6 +205,8 @@ async def users_turn_to_speak(
     if not updated_item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Session not found or update failed")
     
+    base_url = _base_url_from_request(request)
+    updated_item = _absolute_audio_urls(updated_item, base_url)
     return APIResponse(status_code=200, data=updated_item, detail=f"Session updated successfully")
 
 

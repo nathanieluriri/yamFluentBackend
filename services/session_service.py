@@ -47,7 +47,7 @@ async def add_session(session_data: SessionBase) -> SessionOut:
         user_id=created.userId,
         date_created=created.date_created,
     )
-    return created
+    return _with_stream_urls(created)
 
 
 async def remove_session(session_id: str,user_id:str):
@@ -109,7 +109,7 @@ async def retrieve_session_by_session_id(id: str,user_id:str) -> SessionOut:
     if not result:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    return result
+    return _with_stream_urls(result)
 
 
 async def retrieve_sessions(user_id:str,start=0,stop=100,filters:dict=None) -> List[SessionOut]:
@@ -121,7 +121,8 @@ async def retrieve_sessions(user_id:str,start=0,stop=100,filters:dict=None) -> L
     if filters is None:
         filters = {}
     filters["userId"] =user_id
-    return await get_sessions(filter_dict=filters,start=start,stop=stop)
+    sessions = await get_sessions(filter_dict=filters, start=start, stop=stop)
+    return [_with_stream_urls(session) for session in sessions]
 
 
 async def delete_sessions_for_user(userId: str, batch_size: int = 100) -> int:
@@ -194,4 +195,42 @@ async def update_session_by_id(session_id: str,user_id:str,turn_index:int,audio:
     if not result:
         raise HTTPException(status_code=404, detail="Session not found or update failed")
 
-    return result
+    return _with_stream_urls(result)
+
+
+def _build_audio_stream_url(
+    session_id: str,
+    turn_index: int,
+    audio_type: str,
+) -> str:
+    return f"/v1/users/sessions/audio/{session_id}/{turn_index}?audio_type={audio_type}"
+
+
+def _with_stream_urls(session: SessionOut) -> SessionOut:
+    session_id = getattr(session, "id", None)
+    if not session_id:
+        return session
+    copy = session.model_copy(deep=True)
+    script = getattr(copy, "script", None)
+    turns = getattr(script, "turns", None) if script else None
+    if not turns:
+        return copy
+    for idx, turn in enumerate(turns):
+        turn_index = getattr(turn, "index", None)
+        if turn_index is None:
+            turn_index = idx
+        model_audio_url = getattr(turn, "model_audio_url", None)
+        if model_audio_url:
+            turn.model_audio_url = _build_audio_stream_url(
+                session_id=session_id,
+                turn_index=turn_index,
+                audio_type="model",
+            )
+        user_audio_url = getattr(turn, "user_audio_url", None)
+        if user_audio_url:
+            turn.user_audio_url = _build_audio_stream_url(
+                session_id=session_id,
+                turn_index=turn_index,
+                audio_type="user",
+            )
+    return copy
