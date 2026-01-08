@@ -17,6 +17,7 @@ from openai import (
     AuthenticationError,
     RateLimitError,
 )
+from bson import ObjectId
 from schemas.imports import ScenarioName
 from schemas.response_schema import APIResponse
 from schemas.session import (
@@ -31,6 +32,7 @@ from schemas.tokens_schema import accessTokenOut
 from security.auth import verify_admin_token, verify_token_user_role
 from controller.script_generation.audio import extract_r2_key
 from controller.script_generation.clients import get_r2_client
+from repositories.session import get_session
 from services.session_service import (
     add_session,
     remove_session,
@@ -231,7 +233,11 @@ async def stream_session_audio(
     ),
     token: accessTokenOut = Depends(verify_token_user_role),
 ):
-    session = await retrieve_session_by_session_id(id=id, user_id=token.userId)
+    if not ObjectId.is_valid(id):
+        raise HTTPException(status_code=400, detail="Invalid session ID format")
+    session = await get_session(filter_dict={"_id": ObjectId(id), "userId": token.userId})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
     script = getattr(session, "script", None)
     turns = getattr(script, "turns", None) if script else None
     if not turns or turn_index < 0 or turn_index >= len(turns):
