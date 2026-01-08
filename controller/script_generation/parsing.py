@@ -6,6 +6,8 @@ from schemas.imports import AIGeneratedTurns
 
 def parse_turns(raw_content: str) -> List[Dict[str, str]]:
     parsed = json.loads(raw_content)
+    if isinstance(parsed, dict) and "turns" in parsed:
+        parsed = parsed["turns"]
     if not isinstance(parsed, list):
         raise ValueError("Model output is not a list")
     for item in parsed:

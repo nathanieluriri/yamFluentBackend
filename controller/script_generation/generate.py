@@ -71,21 +71,45 @@ async def generate_script(user_id: str, scenario_name: str) -> FluencyScript:
     client = get_openai_client()
     model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
-    async def request_script(strict: bool) -> str:
-        strict_suffix = (
-            " Return ONLY valid JSON. No markdown, no commentary, no code fences."
-            if strict
-            else ""
-        )
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "turns",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "turns": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "role": {"type": "string", "enum": ["ai", "user"]},
+                                "text": {"type": "string", "minLength": 1},
+                            },
+                            "required": ["role", "text"],
+                        },
+                        "minItems": 1,
+                    }
+                },
+                "required": ["turns"],
+            },
+        },
+    }
+
+    async def request_script() -> str:
         async with get_openai_semaphore():
             await apply_openai_rate_limit()
             response = await client.chat.completions.create(
                 model=model_name,
                 messages=[
-                    {"role": "system", "content": system_prompt + strict_suffix},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.6,
+                response_format=response_format,
             )
         return (response.choices[0].message.content or "").strip()
 
@@ -101,24 +125,20 @@ async def generate_script(user_id: str, scenario_name: str) -> FluencyScript:
             raise ValueError("Final turn is not an AI recap")
         return turns
 
-    raw_content = await request_script(strict=False)
+    raw_content = await request_script()
     try:
         turns = validate_or_raise(raw_content)
-    except Exception:
-        raw_content = await request_script(strict=True)
-        try:
-            turns = validate_or_raise(raw_content)
-        except Exception as exc:
-            snippet = raw_content[:200].replace("\n", " ")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to generate a valid script. Output snippet: {snippet}",
-            ) from exc
+    except Exception as exc:
+        snippet = raw_content[:200].replace("\n", " ")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate a valid script. Output snippet: {snippet}",
+        ) from exc
 
     ai_voice = os.getenv("OPENAI_TTS_VOICE_AI", "alloy")
     user_voice = os.getenv("OPENAI_TTS_VOICE_USER", "nova")
     key_prefix = f"scripts/{user_id}/{scenario_name}"
-    audio_concurrency = int(os.getenv("AUDIO_GEN_CONCURRENCY", "4"))
+    audio_concurrency = int(os.getenv("AUDIO_GEN_CONCURRENCY", "20"))
     semaphore = asyncio.Semaphore(audio_concurrency)
 
     async def build_turn(index: int, turn: AIGeneratedTurns) -> Turn:
