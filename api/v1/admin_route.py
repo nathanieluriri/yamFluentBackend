@@ -33,7 +33,8 @@ router = APIRouter(prefix="/admins", tags=["Admins"])
 
 
 def _base_url_from_request(request: Request) -> str:
-    return str(request.url_for("read_root")).rstrip("/")
+    base_url = str(request.url_for("read_root")).rstrip("/")
+    return base_url.replace("http://", "https://", 1)
 
 
 def _absolute_audio_urls(sessions: List[SessionOut], base_url: str) -> List[SessionOut]:
