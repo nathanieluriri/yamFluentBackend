@@ -5,8 +5,9 @@ import logging
 import os
 import random
 import time
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Path, UploadFile, status
-from typing import List, Optional, Tuple
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Path, Request, UploadFile, status
+from fastapi.responses import StreamingResponse
+from typing import List, Optional, Tuple, Literal
 import json
 from openai import (
     APIError,
@@ -28,6 +29,8 @@ from schemas.session import (
 )
 from schemas.tokens_schema import accessTokenOut
 from security.auth import verify_admin_token, verify_token_user_role
+from controller.script_generation.audio import extract_r2_key
+from controller.script_generation.clients import get_r2_client
 from services.session_service import (
     add_session,
     remove_session,
@@ -176,6 +179,86 @@ async def users_turn_to_speak(
 
 
 
+def _iter_audio_body(body, chunk_size: int = 1024 * 1024):
+    for chunk in body.iter_chunks(chunk_size=chunk_size):
+        if chunk:
+            yield chunk
+
+
+@router.get(
+    "/audio/{id}/{turn_index}",
+    dependencies=[Depends(verify_token_user_role)],
+)
+async def stream_session_audio(
+    request: Request,
+    id: str = Path(..., description="Session ID containing the audio"),
+    turn_index: int = Path(..., description="Turn index in the session script"),
+    audio_type: Literal["model", "user"] = Query(
+        "model", description="Which audio to stream: model or user"
+    ),
+    token: accessTokenOut = Depends(verify_token_user_role),
+):
+    session = await retrieve_session_by_session_id(id=id, user_id=token.userId)
+    script = getattr(session, "script", None)
+    turns = getattr(script, "turns", None) if script else None
+    if not turns or turn_index < 0 or turn_index >= len(turns):
+        raise HTTPException(status_code=400, detail="Turn index out of range.")
+    turn = turns[turn_index]
+    audio_url = getattr(
+        turn,
+        "user_audio_url" if audio_type == "user" else "model_audio_url",
+        None,
+    )
+    if not audio_url:
+        raise HTTPException(status_code=404, detail="Audio not found for this turn.")
+
+    key = extract_r2_key(audio_url)
+    if not key:
+        raise HTTPException(status_code=404, detail="Audio storage key not found.")
+    bucket = os.getenv("CLOUDFLARE_R2_BUCKET")
+    if not bucket:
+        raise HTTPException(status_code=500, detail="Missing CLOUDFLARE_R2_BUCKET.")
+
+    range_header = request.headers.get("range")
+    if range_header and not range_header.startswith("bytes="):
+        range_header = None
+
+    client = get_r2_client()
+    get_kwargs = {"Bucket": bucket, "Key": key}
+    if range_header:
+        get_kwargs["Range"] = range_header
+
+    try:
+        r2_response = await asyncio.to_thread(client.get_object, **get_kwargs)
+    except Exception as exc:
+        raise HTTPException(status_code=404, detail="Audio object not found.") from exc
+
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "private, max-age=3600",
+    }
+    content_range = r2_response.get("ContentRange")
+    if content_range:
+        headers["Content-Range"] = content_range
+    content_length = r2_response.get("ContentLength")
+    if content_length is not None:
+        headers["Content-Length"] = str(content_length)
+    etag = r2_response.get("ETag")
+    if etag:
+        headers["ETag"] = etag
+
+    status_code = 206 if range_header else 200
+    content_type = r2_response.get("ContentType") or "audio/mpeg"
+    body = r2_response["Body"]
+
+    return StreamingResponse(
+        _iter_audio_body(body),
+        status_code=status_code,
+        media_type=content_type,
+        headers=headers,
+    )
+
+
 @router.get("/openai/info", dependencies=[Depends(verify_token_user_role)])
 async def openai_config_info(token: accessTokenOut = Depends(verify_token_user_role)):
     """
@@ -189,4 +272,3 @@ async def openai_config_info(token: accessTokenOut = Depends(verify_token_user_r
         "openai_api_key_prefix": f"{api_key[:6]}..." if api_key else None,
     }
     return APIResponse(status_code=200, data=payload, detail="OpenAI config info")
-

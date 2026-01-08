@@ -83,6 +83,10 @@ def _extract_r2_key(audio_url: str) -> Optional[str]:
     return audio_url.lstrip("/")
 
 
+def extract_r2_key(audio_url: str) -> Optional[str]:
+    return _extract_r2_key(audio_url)
+
+
 async def delete_audio_by_urls(audio_urls: List[str]) -> int:
     bucket = os.getenv("CLOUDFLARE_R2_BUCKET")
     if not bucket:
