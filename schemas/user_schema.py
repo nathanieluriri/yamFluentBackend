@@ -123,7 +123,7 @@ SCENARIO_CONFIG: dict[ScenarioName, ScenarioConfig] = {
         "scenerioImageUrl": "https://placehold.co/600x400?text=Cafe+Ordering",
         "benefitsOfScenerio": "Practice quick ordering, clarifying items, and handling payment politely.",
     },
-    ScenarioName.AIRPORT_CHECKIN: {
+    ScenarioName.AIRPORT_CHECK_IN: {
         "scenarioDifficultyRating": 3,
         "scenerioImageUrl": "https://placehold.co/600x400?text=Airport+Check-in",
         "benefitsOfScenerio": "Build confidence with documents, baggage questions, and gate changes.",

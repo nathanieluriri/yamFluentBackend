@@ -74,7 +74,7 @@ class FluencyScript(BaseModel):
     
 class ScenarioName(str, Enum):
     CAFE_ORDERING = "cafe_ordering"
-    AIRPORT_CHECKIN = "airport_checking"
+    AIRPORT_CHECK_IN = "airport_check_in"
     DOCTOR_VISIT = "doctor_visit"
     JOB_INTERVIEW = "job_interview"
     SCHOOL_CLASS_PARTICIPATION = "school_class_participation"
