@@ -8,7 +8,7 @@
 # ============================================================================
 
 from schemas.imports import *
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 import time
 
 
@@ -83,7 +83,12 @@ class SessionOut(SessionBase):
         validation_alias=AliasChoices("last_updated", "lastUpdated"),
         serialization_alias="lastUpdated",
     )
-    
+    @field_validator("scenario", mode="before")
+    @classmethod
+    def normalize_scenario(cls, v):
+        if v == "airport_checkin":
+            return "airport_check_in"
+        return v
     @model_validator(mode="before")
     @classmethod
     def convert_objectid(cls, values):
@@ -120,6 +125,12 @@ class ListOfSessionOut(BaseModel):
     )
     average_score: Optional[float] = Field(default=None, serialization_alias="averageScore")
     script: Optional[FluencyScript] = Field(default=None, exclude=True)
+    @field_validator("scenario", mode="before")
+    @classmethod
+    def normalize_scenario(cls, v):
+        if v == "airport_checkin":
+            return "airport_check_in"
+        return v
     @model_validator(mode="before")
     @classmethod
     def convert_objectid(cls, values):
