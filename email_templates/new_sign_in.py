@@ -3,8 +3,6 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# Choose between 'sqlite' or 'mongodb'
 DB_NAME = os.getenv("DB_NAME", "test").lower()
 
 

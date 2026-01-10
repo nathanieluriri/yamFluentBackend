@@ -1,12 +1,3 @@
-# ============================================================================
-#SESSION SCHEMA 
-# ============================================================================
-# This file was auto-generated on: 2026-01-05 17:35:18 WAT
-# It contains Pydantic classes  database
-# for managing attributes and validation of data in and out of the MongoDB database.
-#
-# ============================================================================
-
 from schemas.imports import *
 from pydantic import AliasChoices, Field, field_validator
 import time
@@ -49,7 +40,6 @@ class SessionBase(SessionBaseRequest):
  
 
 class SessionCreate(SessionBase):
-    # Add other fields here
     script:FluencyScript
     date_created: int = Field(default_factory=lambda: int(time.time()), serialization_alias="dateCreated")
     last_updated: int = Field(default_factory=lambda: int(time.time()), serialization_alias="lastUpdated")
@@ -64,7 +54,6 @@ class SessionUpdate(BaseModel):
     last_updated: int = Field(default_factory=lambda: int(time.time()), serialization_alias="lastUpdated")
     
 class SessionOut(SessionBase):
-    # Add other fields here 
     script:FluencyScript
     average_score: Optional[float] = Field(default=None, serialization_alias="averageScore")
     completed: Optional[bool] = Field(default=None, serialization_alias="completed")
@@ -93,7 +82,7 @@ class SessionOut(SessionBase):
     @classmethod
     def convert_objectid(cls, values):
         if "_id" in values and isinstance(values["_id"], ObjectId):
-            values["_id"] = str(values["_id"])  # coerce to string before validation
+            values["_id"] = str(values["_id"])
         return values
     
     @model_validator(mode="after")
@@ -103,10 +92,10 @@ class SessionOut(SessionBase):
         return self
             
     class Config:
-        populate_by_name = True  # allows using `id` when constructing the model
-        arbitrary_types_allowed = True  # allows ObjectId type
+        populate_by_name = True
+        arbitrary_types_allowed = True
         json_encoders ={
-            ObjectId: str  # automatically converts ObjectId → str
+            ObjectId: str
         }
 
 
@@ -135,7 +124,7 @@ class ListOfSessionOut(BaseModel):
     @classmethod
     def convert_objectid(cls, values):
         if "_id" in values and isinstance(values["_id"], ObjectId):
-            values["_id"] = str(values["_id"])  # coerce to string before validation
+            values["_id"] = str(values["_id"])
         return values
     @model_validator(mode="after")
     def set_list_summary_fields(self):

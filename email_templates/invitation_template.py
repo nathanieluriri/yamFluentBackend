@@ -1,6 +1,4 @@
 from string import Template
-
-# --- Invitation Email Template ---
 invitation_template_string = Template("""
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en">
@@ -83,9 +81,6 @@ def generate_invitation_email_from_template(
     invitee_password: str,
     portal_name: str = "Yam Fluent Admin Portal"
 ) -> str:
-    """
-    Generates an invitation email from a template, handling potential errors.
-    """
     try:
         return invitation_template_string.substitute(
             invitee_email=invitee_email,

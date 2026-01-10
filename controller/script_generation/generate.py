@@ -34,7 +34,6 @@ from schemas.user_schema import UserPersonalProfilingData
 
 
 async def generate_script(user_id: str, scenario_name: str) -> FluencyScript:
-    # Helper function to create new AIGeneratedTurns according to scenario name and user info.
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=400, detail="Invalid user ID format")
 

@@ -10,7 +10,6 @@ def hash_password(password: str|bytes) -> bytes:
  
 
 def check_password(password: str, hashed: bytes | str) -> bool:
-    # if hashed is string, convert to bytes
     if isinstance(hashed, str):
         hashed = hashed.encode('utf-8')
     return bcrypt.checkpw(password.encode('utf-8'), hashed)

@@ -1,11 +1,3 @@
-# ============================================================================
-# SESSION SERVICE
-# ============================================================================
-# This file was auto-generated on: 2026-01-05 17:43:29 WAT
-# It contains  asynchrounous functions that make use of the repo functions 
-# 
-# ============================================================================
-
 from bson import ObjectId
 from fastapi import HTTPException, UploadFile
 from typing import List
@@ -33,11 +25,6 @@ from schemas.session import (
 
 
 async def add_session(session_data: SessionBase) -> SessionOut:
-    """Creates   SessionCreate Object from SessionBase by generating a script and then saving to the database also returns an object
-
-    Returns:
-        _type_: SessionOut
-    """
     user_script=await generate_script(user_id=session_data.userId,scenario_name=session_data.scenario)
     session = SessionCreate(**session_data.model_dump(),script=user_script)    
     
@@ -51,12 +38,6 @@ async def add_session(session_data: SessionBase) -> SessionOut:
 
 
 async def remove_session(session_id: str,user_id:str):
-    """deletes a field from the database and removes SessionCreateobject 
-
-    Raises:
-        HTTPException 400: Invalid session ID format
-        HTTPException 404:  Session not found
-    """
     if not ObjectId.is_valid(session_id):
         raise HTTPException(status_code=400, detail="Invalid session ID format")
 
@@ -91,15 +72,6 @@ async def remove_session(session_id: str,user_id:str):
     
     
 async def retrieve_session_by_session_id(id: str,user_id:str) -> SessionOut:
-    """Retrieves session object based specific Id 
-
-    Raises:
-        HTTPException 404(not found): if  Session not found in the db
-        HTTPException 400(bad request): if  Invalid session ID format
-
-    Returns:
-        _type_: SessionOut
-    """
     if not ObjectId.is_valid(id):
         raise HTTPException(status_code=400, detail="Invalid session ID format")
 
@@ -113,11 +85,6 @@ async def retrieve_session_by_session_id(id: str,user_id:str) -> SessionOut:
 
 
 async def retrieve_sessions(user_id:str,start=0,stop=100,filters:dict=None) -> List[SessionOut]:
-    """Retrieves SessionOut Objects in a list
-
-    Returns:
-        _type_: SessionOut
-    """
     if filters is None:
         filters = {}
     filters["userId"] =user_id
@@ -126,10 +93,6 @@ async def retrieve_sessions(user_id:str,start=0,stop=100,filters:dict=None) -> L
 
 
 async def delete_sessions_for_user(userId: str, batch_size: int = 100) -> int:
-    """
-    Deletes all sessions for a given user by listing sessions and removing them one by one.
-    Intended for async execution via the celery run_async_task worker.
-    """
     deleted = 0
     while True:
         sessions = await retrieve_sessions(user_id=userId, start=0, stop=batch_size)
@@ -159,15 +122,6 @@ async def retrieve_session_summaries(
 
 
 async def update_session_by_id(session_id: str,user_id:str,turn_index:int,audio:UploadFile,  ) -> SessionOut:
-    """updates an entry of session in the database
-
-    Raises:
-        HTTPException 404(not found): if Session not found or update failed
-        HTTPException 400(not found): Invalid session ID format
-
-    Returns:
-        _type_: SessionOut
-    """
     if not ObjectId.is_valid(session_id):
         raise HTTPException(status_code=400, detail="Invalid session ID format")
 

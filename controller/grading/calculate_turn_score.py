@@ -69,9 +69,6 @@ async def calculate_turn_score(
     leniency: float = 1.0,
     debug: bool = False,
 ) -> SessionUpdate:
-    """
-    Calculate scores for a user turn, including ASR transcript and mispronounced words.
-    """
     if not ObjectId.is_valid(session_id):
         raise HTTPException(status_code=400, detail="Invalid session ID format")
     if not ObjectId.is_valid(user_id):

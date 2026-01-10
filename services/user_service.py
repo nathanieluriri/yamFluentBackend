@@ -54,11 +54,6 @@ async def revoke_google_token(token: str):
 
 
 async def add_user(user_data: UserCreate) -> UserOut:
-    """adds an entry of RiderCreate to the database and returns an object
-
-    Returns:
-        _type_: RiderOut
-    """
     user =  await get_user(filter_dict={"email":user_data.email.lower()})
     if user_data.loginType==LoginType.google and user==None:
         new_rider= await create_user(user_data)
@@ -135,12 +130,6 @@ async def refresh_user_tokens_reduce_number_of_logins(user_refresh_data:UserRefr
     raise HTTPException(status_code=400,detail="Invalid refresh token ")  
         
 async def remove_user(user_id: str):
-    """deletes a field from the database and removes UserCreateobject 
-
-    Raises:
-        HTTPException 400: Invalid user ID format
-        HTTPException 404:  User not found
-    """
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=400, detail="Invalid user ID format")
 
@@ -154,15 +143,6 @@ async def remove_user(user_id: str):
 
 
 async def retrieve_user_by_user_id(id: str) -> UserOut:
-    """Retrieves user object based specific Id 
-
-    Raises:
-        HTTPException 404(not found): if  User not found in the db
-        HTTPException 400(bad request): if  Invalid user ID format
-
-    Returns:
-        _type_: UserOut
-    """
     if not ObjectId.is_valid(id):
         raise HTTPException(status_code=400, detail="Invalid user ID format")
 
@@ -176,22 +156,9 @@ async def retrieve_user_by_user_id(id: str) -> UserOut:
 
 
 async def retrieve_users(start=0,stop=100) -> List[UserOut]:
-    """Retrieves UserOut Objects in a list
-
-    Returns:
-        _type_: UserOut
-    """
     return await get_users(start=start,stop=stop)
 
 async def update_user_by_id(driver_id: str, driver_data: UserUpdate,is_password_getting_changed:bool=False) -> UserOut:
-    """updates an entry of driver in the database
-
-    Raises:
-        HTTPException 404(not found): if Driver not found or update failed
-        HTTPException 400(not found): Invalid driver ID format
-
-    Returns:
-    """
     from celery_worker import celery_app
     if not ObjectId.is_valid(driver_id):
         raise HTTPException(status_code=400, detail="Invalid user ID format")
@@ -207,15 +174,6 @@ async def update_user_by_id(driver_id: str, driver_data: UserUpdate,is_password_
 
 
 async def logout_user(user_id: str):
-    """
-    Logs out a user by:
-    - retrieving the user
-    - revoking OAuth tokens (if any)
-    - deleting all local access & refresh tokens
-
-    All operations run concurrently.
-    """
-
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=400, detail="Invalid user ID")
 
@@ -225,7 +183,6 @@ async def logout_user(user_id: str):
     async def delete_tokens_task():
         await delete_all_tokens_with_user_id(userId=user_id)
 
-    # Run DB fetch + token deletion in parallel
     user, _ = await asyncio.gather(
         get_user_task(),
         delete_tokens_task(),
@@ -234,12 +191,10 @@ async def logout_user(user_id: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Revoke OAuth token AFTER user is known
     if user.loginType == LoginType.google and getattr(user, "oauth_access_token", None):
         try:
             await revoke_google_token(user.oauth_access_token)
         except Exception:
-            # Never block logout if Google revoke fails
             pass
 
     return True

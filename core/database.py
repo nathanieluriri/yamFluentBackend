@@ -3,11 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Choose between 'sqlite' or 'mongodb'
 DB_TYPE = os.getenv("DB_TYPE", "mongodb").lower()
 
 if DB_TYPE == "sqlite":
-    # SQLite setup
     import sqlite3
 
     database_name = "db.db"

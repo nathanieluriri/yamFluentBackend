@@ -19,11 +19,6 @@ from services.email_service import send_invite_notification
 
 
 async def add_admin(admin_data: AdminCreate,password:str) -> AdminOut:
-    """adds an entry of AdminCreate to the database and returns an object
-
-    Returns:
-        _type_: AdminOut
-    """
     admin =  await get_admin(filter_dict={"email":admin_data.email})
     if admin==None:
         inviter = await retrieve_admin_by_admin_id(id=admin_data.invited_by)
@@ -75,12 +70,6 @@ async def refresh_admin_tokens_reduce_number_of_logins(admin_refresh_data:AdminR
     raise HTTPException(status_code=404,detail="Invalid refresh token ")  
         
 async def remove_admin(admin_id: str):
-    """deletes a field from the database and removes AdminCreateobject 
-
-    Raises:
-        HTTPException 400: Invalid admin ID format
-        HTTPException 404:  Admin not found
-    """
     if not ObjectId.is_valid(admin_id):
         raise HTTPException(status_code=400, detail="Invalid admin ID format")
 
@@ -93,15 +82,6 @@ async def remove_admin(admin_id: str):
 
 
 async def retrieve_admin_by_admin_id(id: str) -> AdminOut:
-    """Retrieves admin object based specific Id 
-
-    Raises:
-        HTTPException 404(not found): if  Admin not found in the db
-        HTTPException 400(bad request): if  Invalid admin ID format
-
-    Returns:
-        _type_: AdminOut
-    """
     if not ObjectId.is_valid(id):
         raise HTTPException(status_code=400, detail="Invalid admin ID format")
 
@@ -115,23 +95,9 @@ async def retrieve_admin_by_admin_id(id: str) -> AdminOut:
 
 
 async def retrieve_admins(start=0,stop=100) -> List[AdminOut]:
-    """Retrieves AdminOut Objects in a list
-
-    Returns:
-        _type_: AdminOut
-    """
     return await get_admins(start=start,stop=stop)
 
 async def update_admin_by_id(admin_id: str, admin_data: AdminUpdate,is_password_getting_changed:bool=False) -> AdminOut:
-    """_summary_
-
-    Raises:
-        HTTPException 404(not found): if Admin not found or update failed
-        HTTPException 400(not found): Invalid admin ID format
-
-    Returns:
-        _type_: AdminOut
-    """
     from celery_worker import celery_app
 
     if not ObjectId.is_valid(admin_id):
@@ -150,13 +116,5 @@ async def update_admin_by_id(admin_id: str, admin_data: AdminUpdate,is_password_
 
 
 async def logout_admin(admin_id: str):
-    """
-    Invalidates all active tokens/sessions for the admin.
-    This could:
-    - delete refresh tokens from DB
-    - blacklist access tokens
-    - reset login counters
-    """
-    # implementation detail depends on your auth design
     await delete_all_tokens_with_admin_id(adminId=admin_id)
     return True

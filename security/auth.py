@@ -1,4 +1,3 @@
-# auth.py
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 from security.tokens import validate_admin_accesstoken,validate_admin_accesstoken_otp,generate_refresh_tokens,generate_member_access_tokens, validate_member_accesstoken, validate_refreshToken,validate_member_accesstoken_without_expiration,generate_admin_access_tokens,validate_expired_admin_accesstoken
@@ -10,30 +9,6 @@ from services.user_service import retrieve_user_by_user_id
 
 
 token_auth_scheme = HTTPBearer()
-
-# async def verify_token(token: str = Depends(token_auth_scheme))->accessTokenOut:
-#     decoded_token = await decode_jwt_token(token=token.credentials)
-    
-#     if decoded_token['user_type']=="RIDER":
-        
-#         RIDER = await retrieve_rider_by_rider_id(id=decoded_token['user_id'])
-#         if RIDER:
-#             return JWTPayload(**decoded_token)
-#     elif decoded_token['user_type']=="DRIVER":
-#         DRIVER = await retrieve_driver_by_driver_id(id=decoded_token['user_id'])
-#         if DRIVER:
-#             return JWTPayload(**decoded_token)
-#     elif decoded_token==None:
-#         raise HTTPException(
-#             status_code=status.HTTP_401_UNAUTHORIZED,
-#             detail="Invalid token"
-#         )
-     
-            
-            
-
-
-            
 async def verify_token_to_refresh(token: str = Depends(token_auth_scheme)):
     tokens = await decode_jwt_token_without_expiration(token=token.credentials)
     try:

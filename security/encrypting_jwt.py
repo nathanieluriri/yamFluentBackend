@@ -9,14 +9,7 @@ from bson import ObjectId
 
 load_dotenv()
 SECRETID = os.getenv("SECRETID")
-# Token lifetime (in minutes)
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
-# Secret key for signing (use env var in production)
-
-
-# ---------------------------
-# JWT Schema
-# ---------------------------
 class JWTPayload(BaseModel):
     access_token: str
     user_id: str
@@ -61,9 +54,6 @@ async def get_secret_and_header():
     return result
 
 
-# ---------------------------
-# Create Token
-# ---------------------------
 def create_jwt_token(
     access_token: str,
     user_id: str,
@@ -85,7 +75,7 @@ def create_jwt_token(
     token = jwt.encode(
         payload=payload,
         key=_get_jwt_secret(),
-        algorithm=ALGORITHM,   # "HS256"
+        algorithm=ALGORITHM,
         headers={"typ": "JWT"},
     )
 
@@ -125,21 +115,7 @@ def create_jwt_admin_token(token: str,userId:str):
 
 
 async def decode_jwt_token(token: str):
-    """
-    Decodes and verifies a JWT token.
-
-    Args:
-        token (str): Encoded JWT token.
-
-    Returns:
-        dict | None: Decoded payload if valid, or None if invalid/expired.
-
-    Example:
-        {'accessToken': '682c99f395ff4782fbea010f', 'role': 'admin', 'exp': 1747825460}
-    """
-
     try:
-        # Decode and verify
         decoded = jwt.decode(token, _get_jwt_secret(), algorithms=["HS256"])
         return decoded
 
@@ -161,7 +137,6 @@ async def decode_jwt_token(token: str):
 
 async def decode_jwt_token_without_expiration(token: str):
     try:
-        # Try decoding normally (with expiration check)
         decoded = jwt.decode(token, _get_jwt_secret(), algorithms=["HS256"])
 
         return decoded
@@ -169,7 +144,6 @@ async def decode_jwt_token_without_expiration(token: str):
     except jwt.ExpiredSignatureError:
     
         try:
-            # Decode again but skip exp validation
             decoded = jwt.decode(
                 token, _get_jwt_secret(), algorithms=["HS256"], options={"verify_exp": False}
             )

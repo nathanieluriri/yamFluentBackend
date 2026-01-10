@@ -29,6 +29,5 @@ def test_build_speech_analysis_near_miss():
     assert analysis.alignment_summary.insertions == 0
     assert analysis.alignment_summary.deletions == 0
     assert math.isclose(analysis.alignment_summary.wer, 1 / 3, rel_tol=1e-5)
-    # matches should be logged as ignored differences
     ignored_reasons = {item.ignored_because for item in analysis.ignored_differences}
     assert "exact_match" in ignored_reasons

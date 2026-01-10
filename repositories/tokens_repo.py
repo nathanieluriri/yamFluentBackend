@@ -42,7 +42,6 @@ async def add_refresh_tokens(token_data:refreshTokenCreate)->refreshTokenOut:
     return refreshToken
 
 async def delete_access_token(accessToken):
-    # await db.refreshToken.delete_many({"previousAccessToken":accessToken})
     await db.accessToken.find_one_and_delete({'_id':ObjectId(accessToken)})
     
     
@@ -63,22 +62,13 @@ async def delete_access_and_refresh_token_with_user_id(userId:str)->bool:
 
 
 def is_older_than_days(date_value, days=10):
-    """
-    Accepts either an ISO-8601 string or a UNIX timestamp (int/float).
-    Returns True if older than `days` days.
-    """
-    # Determine type and parse accordingly
     if isinstance(date_value, (int, float)):
-        # It's a UNIX timestamp (seconds)
         created_date = datetime.fromtimestamp(date_value, tz=timezone.utc)
     else:
-        # Assume ISO string
         created_date = parser.isoparse(str(date_value))
 
-    # Get the current time in UTC (with same tzinfo)
     now = datetime.now(timezone.utc)
 
-    # Check if the difference is greater than the given number of days
     return (now - created_date) > timedelta(days=days)
 
 
@@ -145,11 +135,9 @@ from bson.errors import InvalidId
 
 async def get_access_tokens_no_date_check(accessToken: str) -> accessTokenOut | None:
     try:
-        # Try interpreting the token as an ObjectId
         object_id = ObjectId(accessToken)
         token = await db.accessToken.find_one({"_id": object_id})
     except (InvalidId, TypeError):
-        # If it's not a valid ObjectId, fall back to decoding the token
         token = await decode_jwt_token_without_expiration(accessToken)
         print("hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
         print(token)

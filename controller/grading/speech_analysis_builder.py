@@ -43,10 +43,6 @@ def build_speech_analysis(
     asr_model: Optional[str] = None,
     asr_parameters: Optional[Dict[str, Any]] = None,
 ) -> TurnSpeechAnalysis:
-    """
-    Construct a detailed speech analysis artifact from grading intermediates.
-    Mirrors existing mispronunciation logic (near-misses with normalized edit distance <= threshold).
-    """
     asr_meta = ASRMeta(
         model=asr_model,
         parameters=asr_parameters or {},
@@ -135,9 +131,7 @@ def build_speech_analysis(
             )
             continue
 
-        # substitution path
         if norm_ed <= threshold:
-            # near-match: align with existing mispronunciation extraction
             if expected_word not in seen_mispronounced:
                 seen_mispronounced.add(expected_word)
                 mispronounced_entries.append(
@@ -176,7 +170,6 @@ def build_speech_analysis(
                 )
             )
 
-    # Ensure mispronounced list matches existing output ordering
     expected_order_map = {word: i for i, word in enumerate(mispronounced_words)}
     mispronounced_entries.sort(
         key=lambda m: expected_order_map.get(m.expected, m.expected_idx or 0)

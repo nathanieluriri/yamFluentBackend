@@ -14,7 +14,7 @@ class TurnScore(BaseModel):
     fluency:int = Field(serialization_alias="fluency")
     hesitation:int = Field(serialization_alias="hesitation")
 class TurnUpdate(BaseModel):
-    index: int  # which turn in the list to update
+    index: int
     score:Optional[TurnScore]=None
     mispronounced_words: Optional[List[str]] = Field(
         default=None,
@@ -43,13 +43,11 @@ class Turn(BaseModel):
         validation_alias=AliasChoices("mispronounced_words", "mispronouncedWords"),
         serialization_alias="mispronouncedWords",
     )
-    # Audio of correct pronunciation (AI voice)
     model_audio_url: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("model_audio_url", "modelAudioUrl"),
         serialization_alias="modelAudioUrl",
     )  
-    # Audio recorded by the user (can be null)
     user_audio_url: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("user_audio_url", "userAudioUrl"),
@@ -97,16 +95,13 @@ class UserType(str,Enum):
     admin="admin"
 
 class ResetPasswordInitiation(BaseModel):
-    # Add other fields here
     email:EmailStr 
     
 class ResetPasswordInitiationResponse(BaseModel):
-    # Add other fields here
     message:str
     
     
 class ResetPasswordConclusion(BaseModel):
-    # Add other fields here
     resetToken:str
     password:str
     

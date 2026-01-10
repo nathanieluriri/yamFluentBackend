@@ -23,18 +23,10 @@ async def test_scheduler(message):
 
 @celery_app.task(name="celery_worker.run_async_task")
 async def run_async_task(task_key: str, kwargs: dict):
-    """
-    task_key example: 'delete_tokeens'
-    kwargs example: {'filter_dict': {'_id': '...'}}
-    """
-    
-    # 3. Lookup the function object from the registry
     target_func = ASYNC_TASK_REGISTRY.get(task_key)
 
     if not target_func:
         valid_keys = ", ".join(ASYNC_TASK_REGISTRY.keys())
         raise ValueError(f"Task key '{task_key}' is not registered. Available keys: {valid_keys}")
 
-    # 4. Execute the function
-    # Since the function object is already imported, we just call it.
     return await target_func(**kwargs)

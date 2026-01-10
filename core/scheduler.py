@@ -12,7 +12,3 @@ jobstore = MongoDBJobStore(database="apscheduler", collection="background_jobs",
 scheduler = AsyncIOScheduler()
 scheduler.add_jobstore(jobstore)
 
-# EXAMPLE CODE FOR ADDING JOB
-# scheduler.add_job(alarm, "date", run_date=alarm_time, args=[datetime.now()])
-# alarm is a function, "date" is the trigger and run_date is the time for the trigger to happen
-   

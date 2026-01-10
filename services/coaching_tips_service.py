@@ -217,7 +217,6 @@ async def generate_or_get_coaching_tip(
     session = await get_session(filter_dict={"_id": ObjectId(session_id), "userId": user_id})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    # Ensure lesson completed: all user turns must have audio + score
     script = getattr(session, "script", None)
     turns = getattr(script, "turns", None) or []
     for turn in turns:
@@ -259,7 +258,6 @@ async def generate_or_get_coaching_tip(
     try:
         return await create_coaching_tip(tip_data)
     except DuplicateKeyError:
-        # Race: tip was created after the initial check
         existing = await get_coaching_tip_by_session(session_id=session_id, user_id=user_id)
         if existing:
             return existing

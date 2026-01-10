@@ -1,5 +1,3 @@
-# schemas/response_schema.py
-
 from typing import Generic, TypeVar, Optional
 from pydantic import BaseModel, Field
 from pydantic.generics import GenericModel

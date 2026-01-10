@@ -11,7 +11,6 @@ async def check_admin_account_status_and_permissions(
     request: Request,
     token: accessTokenOut = Depends(verify_admin_token),
 ):
-    # 1️⃣ Load admin
     admin = await retrieve_admin_by_admin_id(id=token.get("userId"))
 
     if not admin:
@@ -20,14 +19,12 @@ async def check_admin_account_status_and_permissions(
             detail="Admin not found",
         )
 
-    # 2️⃣ Check account status
     if admin.accountStatus != AccountStatus.ACTIVE:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin account is not active",
         )
 
-    # 3️⃣ Identify current route
     endpoint = request.scope.get("endpoint")
     if endpoint is None:
         raise HTTPException(
@@ -38,7 +35,6 @@ async def check_admin_account_status_and_permissions(
     endpoint_name = endpoint.__name__
     request_method = request.method.upper()
 
-    # 4️⃣ Ensure permissions exist
     permission_list = getattr(admin, "permissionList", None)
 
     if not permission_list or not permission_list.permissions:
@@ -47,16 +43,13 @@ async def check_admin_account_status_and_permissions(
             detail="No permissions assigned to admin",
         )
 
-    # 5️⃣ Permission check
     for permission in permission_list.permissions:
         if (
             permission.name == endpoint_name
             and request_method in permission.methods
         ):
-            # ✅ Authorized
             return admin
 
-    # 6️⃣ Deny if no match
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Insufficient permissions",

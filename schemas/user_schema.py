@@ -19,7 +19,6 @@ class UserLogin(BaseModel):
     
     
 class UserBase(BaseModel):
-    # Add other fields here 
     firstName:Optional[str]=None
     lastName:Optional[str]=None
     loginType:LoginType
@@ -30,14 +29,11 @@ class UserBase(BaseModel):
     pass
 
 class UserRefresh(BaseModel):
-    # Add other fields here 
     refresh_token:str
     pass
 
 
 class UserCreate(UserBase):
-    # Add other fields here
-     
     date_created: int = Field(default_factory=lambda: int(time.time()))
     last_updated: int = Field(default_factory=lambda: int(time.time()))
     @model_validator(mode='after')
@@ -45,7 +41,6 @@ class UserCreate(UserBase):
         self.password=hash_password(self.password)
         return self
 class UserUpdate(BaseModel):
-    # Add other fields here 
     password: Optional[str | bytes] = None
     notifications: Optional["UserNotifications"] = None
     userPersonalProfilingData: Optional["UserPersonalProfilingData"] = None
@@ -89,7 +84,6 @@ class UserNotifications(BaseModel):
 
 
 class UserUpdateProfile(BaseModel):
-    # Add other fields here 
     userPersonalProfilingData:Optional[UserPersonalProfilingData]=None
     last_updated: int = Field(default_factory=lambda: int(time.time()))
  
@@ -234,7 +228,6 @@ def build_user_scenerio_options() -> List[UserScenerioOptions]:
     
 
 class UserOut(UserBase):
-    # Add other fields here 
     loginType:Optional[LoginType]=None
     userPersonalProfilingData:Optional[UserPersonalProfilingData]=None
     onboardingCompleted:Optional[bool]=False
@@ -278,7 +271,7 @@ class UserOut(UserBase):
     @classmethod
     def convert_objectid(cls, values):
         if "_id" in values and isinstance(values["_id"], ObjectId):
-            values["_id"] = str(values["_id"])  # coerce to string before validation
+            values["_id"] = str(values["_id"])
         return values
     
     
@@ -309,16 +302,11 @@ class UserOut(UserBase):
     @model_validator(mode="after")
     @classmethod
     def set_date_joined(cls, model):
-        """If date_joined is None, calculate from date_created."""
-        
         if model.date_Joined is None and model.date_created is not None:
-            # Convert timestamp to UTC datetime
             dt_created = datetime.fromtimestamp(model.date_created, tz=timezone.utc)
 
-            # Example calculation: here we just use the same date_created (adjust as needed)
-            dt_joined = dt_created  # or dt_created + timedelta(days=1)
+            dt_joined = dt_created
 
-            # Format as ISO 8601 with milliseconds and UTC offset
             model.date_Joined = dt_joined.isoformat(timespec="milliseconds")
         if model.userPersonalProfilingData is None:
             model.onboardingCompleted=False
@@ -326,10 +314,10 @@ class UserOut(UserBase):
             model.onboardingCompleted=True
         return model
     class Config:
-        populate_by_name = True  # allows using `id` when constructing the model
-        arbitrary_types_allowed = True  # allows ObjectId type
+        populate_by_name = True
+        arbitrary_types_allowed = True
         json_encoders = {
-            ObjectId: str  # automatically converts ObjectId → str
+            ObjectId: str
         }
         
         

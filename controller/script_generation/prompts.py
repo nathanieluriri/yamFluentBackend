@@ -48,7 +48,6 @@ def normalize_time_value(time_value: str) -> int:
 
 
 def turn_count_for_time(time_value: str) -> int:
-    # Deterministic mapping; odd counts ensure we can end on an AI recap turn.
     mapping = {
         5: 11,
         10: 21,

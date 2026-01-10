@@ -24,7 +24,7 @@ def get_router_get_permissions(router: APIRouter) -> PermissionList:
         permissions=[
             Permission(
                 name=route.endpoint.__name__,
-                methods=["GET"],  # explicitly only GET
+                methods=["GET"],
                 path=route.path,
                 description=route.description,
             )

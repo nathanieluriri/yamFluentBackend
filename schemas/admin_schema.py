@@ -18,18 +18,15 @@ class AdminBase(BaseModel):
 
 
 class AdminLogin(BaseModel):
-    # Add other fields here 
     email:EmailStr
     password:str | bytes
     pass
 class AdminRefresh(BaseModel):
-    # Add other fields here 
     refresh_token:str
     pass
 
 
 class AdminCreate(AdminBase):
-    # Add other fields here
     invited_by:str 
     date_created: int = Field(default_factory=lambda: int(time.time()))
     last_updated: int = Field(default_factory=lambda: int(time.time()))
@@ -38,7 +35,6 @@ class AdminCreate(AdminBase):
         self.password=hash_password(self.password)
         return self
 class AdminUpdate(BaseModel):
-    # Add other fields here 
     password:Optional[str | bytes]=None
     
     last_updated: int = Field(default_factory=lambda: int(time.time()))
@@ -48,7 +44,6 @@ class AdminUpdate(BaseModel):
             self.password=hash_password(self.password)
             return self
 class AdminOut(AdminBase):
-    # Add other fields here 
     id: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices("_id", "id"),
@@ -87,12 +82,12 @@ class AdminOut(AdminBase):
     @classmethod
     def convert_objectid(cls, values):
         if "_id" in values and isinstance(values["_id"], ObjectId):
-            values["_id"] = str(values["_id"])  # coerce to string before validation
+            values["_id"] = str(values["_id"])
         return values
             
     class Config:
-        populate_by_name = True  # allows using `id` when constructing the model
-        arbitrary_types_allowed = True  # allows ObjectId type
+        populate_by_name = True
+        arbitrary_types_allowed = True
         json_encoders = {
-            ObjectId: str  # automatically converts ObjectId → str
+            ObjectId: str
         }

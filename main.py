@@ -28,16 +28,14 @@ REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
 redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
-# --- Heartbeat Function ---
 def apscheduler_heartbeat():
         timestamp = time.time()
-        redis_client.set("apscheduler:heartbeat", str(timestamp), ex=60)  # expires in 60s
+        redis_client.set("apscheduler:heartbeat", str(timestamp), ex=60)
         
         
 @asynccontextmanager
 async def lifespan(app:FastAPI):
     
-    # --- Add Heartbeat Job ---
     scheduler.add_job(
         apscheduler_heartbeat,
         trigger=IntervalTrigger(seconds=15),
@@ -55,19 +53,14 @@ async def lifespan(app:FastAPI):
 
 class RequestTimingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        # Record the start time before processing the request
         start_time = time.time()
         
-        # Process the request and get the response
         response = await call_next(request)
         
-        # Calculate the time taken to process the request
         process_time = time.time() - start_time
         
-        # You can log the time or set it in the response headers
         response.headers['X-Process-Time'] = str(process_time)
         
-        # Optionally, print it for logging purposes
         print(f"Request to {request.url} took {process_time:.6f} seconds")
         
         return response
@@ -75,7 +68,6 @@ class RequestTimingMiddleware(BaseHTTPMiddleware):
     
     
     
-# Create the FastAPI app
 app = FastAPI(
     
     lifespan= lifespan,
@@ -89,7 +81,6 @@ redis_url = os.getenv("CELERY_BROKER_URL") or os.getenv("REDIS_URL") \
     or f"redis://{os.getenv('REDIS_HOST', 'redis')}:{os.getenv('REDIS_PORT', '6379')}/0"
 
 
-# Setup limiter
 storage = RedisStorage(
    redis_url
 )
@@ -107,7 +98,6 @@ RATE_LIMITS = {
 async def get_user_type(request: Request) -> tuple[str, str]:
     auth_header = request.headers.get("Authorization")
 
-    # Anonymous fallback
     if not auth_header or not auth_header.startswith("Bearer "):
         ip = request.headers.get("X-Forwarded-For", request.client.host)
         return ip, "anonymous"
@@ -117,7 +107,6 @@ async def get_user_type(request: Request) -> tuple[str, str]:
     try:
         decoded = await decode_jwt_token(token=token)
 
-        # 🔑 normalize admin vs member JWTs
         access_token_value = (
             decoded.get("access_token")
             or decoded.get("accessToken")
@@ -140,10 +129,8 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
         user_id, user_type = await get_user_type(request)
         rate_limit_rule = RATE_LIMITS[user_type]
 
-        # hit() → True if still under limit
         allowed = limiter.hit(rate_limit_rule, user_id)
 
-        # Get current window stats (reset_time, remaining)
         reset_time, remaining = limiter.get_window_stats(rate_limit_rule, user_id)
         seconds_until_reset = max(math.ceil(reset_time - time.time()), 0)
 
@@ -168,10 +155,8 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
                 ).dict(),
             )
 
-        # Normal flow
         response = await call_next(request)
 
-        # Add rate-limit headers for successful requests too
         response.headers["X-User-Id"]=user_id
         response.headers["X-User-Type"] = user_type
         response.headers["X-RateLimit-Limit"] = str(rate_limit_rule.amount)
@@ -180,23 +165,15 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
 
         return response
 
-# Add the middleware to the app
-# ||||||||||||||||||||||||||||||||||||
-
 app.add_middleware(RateLimitingMiddleware)
-
-# ||||||||||||||||||||||||||||||||||||
-
-# Add CORS middleware (be cautious in production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Custom exception handler for HTTPExceptions
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
@@ -210,7 +187,6 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
 
 async def test_scheduler(message):
     print(message)
-# Simple test route
 @app.get("/", tags=["Health"], include_in_schema=False, name="read_root")
 def read_root():
     run_time = datetime.now() + timedelta(seconds=20)
@@ -220,16 +196,13 @@ def read_root():
     return APIResponse(status_code=200,detail="Successfully fetched data",data=data)
 
 
-# Clients
 mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
 redis_client = redis.Redis.from_url(REDIS_URI, socket_connect_timeout=2)
-# Health check route
 @app.get("/health",tags=["Health"])
 async def health_check():
     overall_status = "healthy"
     services = {}
 
-    # --- MongoDB Check ---
     start_time = time.perf_counter()
     try:
         mongo_client.admin.command("ping")
@@ -248,7 +221,6 @@ async def health_check():
         }
         overall_status = "degraded"
 
-    # --- Redis Check ---
     start_time = time.perf_counter()
     try:
         redis_client.ping()
@@ -267,9 +239,7 @@ async def health_check():
         }
         overall_status = "degraded"
 
-    # --- Worker (Heartbeat) Check ---
     start_time = time.perf_counter()
-    # Check APScheduler
     try:
         aps_heartbeat = redis_client.get("apscheduler:heartbeat")
         if aps_heartbeat:
@@ -303,13 +273,11 @@ async def health_check():
         }
         overall_status = "degraded"
 
-    # --- Final Structured Response ---
     data = {
         "status": overall_status,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
         "services": services
     }
-     # --- Celery health check ---
     try:
         result = celery_app.send_task("celery_worker.test_scheduler", args=["Health check ping"])
         response = result.get(timeout=5)
@@ -334,9 +302,6 @@ async def health_check():
         }
         overall_status = "degraded"
 
-    # --- Final response ---
-
-
     return APIResponse(
         status_code=200 if overall_status == "healthy" else 207,
         detail=f"Health check completed with status: {overall_status}",
@@ -347,13 +312,8 @@ async def health_check():
 @app.get("/health-detailed",tags=["Health"], summary="Performs a detailed health check of all integrated services")
 async def health_check():
     services = {}
-    # This list will track the status of all services
     service_statuses = [] 
     
-    # Note: 'overall_status' will be determined at the end,
-    # not incrementally.
-
-    # --- MongoDB Check ---
     service_name = "mongo"
     service_desc = "Primary Database (MongoDB)"
     start_time = time.perf_counter()
@@ -378,7 +338,6 @@ async def health_check():
         }
     service_statuses.append(status)
 
-    # --- Redis Check ---
     service_name = "redis"
     service_desc = "Cache & Message Broker (Redis)"
     start_time = time.perf_counter()
@@ -403,23 +362,21 @@ async def health_check():
         }
     service_statuses.append(status)
 
-    # --- APScheduler (Heartbeat) Check ---
     service_name = "apscheduler"
     service_desc = "Internal Job Scheduler (APScheduler)"
     start_time = time.perf_counter()
     try:
-        # Check for the heartbeat key set by the scheduler
         aps_heartbeat = redis_client.get("apscheduler:heartbeat")
-        latency = round((time.perf_counter() - start_time) * 1000, 2) # Latency of the check itself
+        latency = round((time.perf_counter() - start_time) * 1000, 2)
         
         if aps_heartbeat:
             last_seen = float(aps_heartbeat)
             age = time.time() - last_seen
             
-            if age <= 30: # Healthy if heartbeat is within 30 seconds
+            if age <= 30:
                 status = "healthy"
                 message = f"Scheduler is active. Last heartbeat {int(age)}s ago."
-            else: # Degraded if heartbeat is stale
+            else:
                 status = "degraded"
                 message = f"Stale heartbeat. Last seen {int(age)}s ago. Scheduler may be stuck or overloaded."
             
@@ -429,7 +386,7 @@ async def health_check():
                 "latency_ms": latency,
                 "message": message
             }
-        else: # Unhealthy if no heartbeat key is found
+        else:
             status = "unhealthy"
             services[service_name] = {
                 "description": service_desc,
@@ -448,8 +405,6 @@ async def health_check():
         }
     service_statuses.append(status)
 
-    # --- Celery Worker Check ---
-    # This check is now run *before* the final response is built
     service_name = "celery"
     service_desc = "Background Task Worker (Celery)"
     start_time = time.perf_counter()
@@ -457,14 +412,13 @@ async def health_check():
     try:
         result = celery_app.send_task("celery_worker.test_scheduler", args=["Health check ping"])
         task_id = result.id
-        # Wait for 5 seconds for the worker to respond
         response = result.get(timeout=5) 
         latency = round((time.perf_counter() - start_time) * 1000, 2)
         status = "healthy"
         services[service_name] = {
             "description": service_desc,
             "status": status,
-            "latency_ms": latency, # Now captures actual task round-trip time
+            "latency_ms": latency,
             "message": f"Worker task executed successfully. Response: '{response}'",
             "task_id": task_id
         }
@@ -474,7 +428,7 @@ async def health_check():
         services[service_name] = {
             "description": service_desc,
             "status": status,
-            "latency_ms": latency, # Will be ~5000+
+            "latency_ms": latency,
             "message": "Celery task timed out after 5 seconds. Worker may be busy or down.",
             "task_id": task_id
         }
@@ -490,8 +444,6 @@ async def health_check():
         }
     service_statuses.append(status)
 
-    # --- Determine Overall Status ---
- 
     if "unhealthy" in service_statuses:
         overall_status = "unhealthy"
     elif "degraded" in service_statuses:
@@ -499,16 +451,12 @@ async def health_check():
     else:
         overall_status = "healthy"
 
-    # --- Final Structured Response ---
- 
     data = {
         "status": overall_status,
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), # Using ISO 8601 format
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "services": services
     }
     
-    # --- Final response ---
-     
     http_status_code = 200 if overall_status == "healthy" else 207
 
    
@@ -518,7 +466,6 @@ async def health_check():
         data=data  
     )
 
-# --- auto-routes-start ---
 from api.v1.admin_route import router as v1_admin_route_router
 from api.v1.coaching_tips import router as v1_coaching_tips_router
 from api.v1.session import router as v1_session_router
@@ -530,4 +477,3 @@ app.include_router(v1_session_router, prefix='/v1/users')
 app.include_router(v1_coaching_tips_router, prefix='/v1/users')
 app.include_router(v1_settings_router, prefix='/v1/users')
 app.include_router(v1_user_route_router, prefix='/v1')
-# --- auto-routes-end ---

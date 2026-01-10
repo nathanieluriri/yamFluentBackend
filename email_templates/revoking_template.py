@@ -1,7 +1,5 @@
 from string import Template
 import logging
-
-# --- Revoke Invitation Email Template ---
 revoke_invitation_template_string = Template("""
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en">
@@ -54,9 +52,6 @@ def generate_revoke_invitation_email_from_template(
     revoked_by_email: str,
     project_name: str
 ) -> str:
-    """
-    Generates an invitation revocation email from a template.
-    """
     try:
         return revoke_invitation_template_string.substitute(
             revoked_user_email=revoked_user_email,
@@ -67,11 +62,9 @@ def generate_revoke_invitation_email_from_template(
         logging.error(f"Error: Missing template variable: {e}")
         return None
 
-# --- Example Usage ---
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    # --- Generating a test revoke invitation email ---
     test_revoked_user_email = "recipient@example.com"
     test_revoked_by_email = "admin@example.com"
     test_project_name = "Project Alpha"
@@ -85,6 +78,5 @@ if __name__ == "__main__":
 
     if email_html:
         print("Email HTML generated successfully:")
-        # print(email_html) # Uncomment to see the full HTML output
     else:
         print("Failed to generate email HTML.")

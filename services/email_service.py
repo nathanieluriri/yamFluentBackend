@@ -9,17 +9,13 @@ from email_templates.new_sign_in import generate_new_signin_warning_email_from_t
 from email_templates.invitation_template import generate_invitation_email_from_template
 from email_templates.revoking_template import generate_revoke_invitation_email_from_template
 
-# Load environment variables
 load_dotenv()
 
-# Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Required environment variables
 REQUIRED_ENV_VARS = ["EMAIL_USERNAME", "EMAIL_PASSWORD", "EMAIL_HOST", "EMAIL_PORT"]
 
-# Check for missing environment variables
 missing_vars = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
 
 if missing_vars:
@@ -28,13 +24,10 @@ if missing_vars:
         "Please check your .env file."
     )
 
-# Safe to load now
 EMAIL_USERNAME = os.getenv("EMAIL_USERNAME")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 EMAIL_HOST = os.getenv("EMAIL_HOST")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT"))  # Cast after check
-
-# ------------------- Email Sending Function -------------------
+EMAIL_PORT = int(os.getenv("EMAIL_PORT"))
 
 def send_html_email_optimized(
     sender_email: str,
@@ -48,8 +41,6 @@ def send_html_email_optimized(
     smtp_login: str,
     smtp_password: str
 ):
-    """Sends an HTML email with plain-text fallback and a display name."""
-
     formatted_from_address = formataddr((sender_display_name, sender_email))
 
     msg = MIMEMultipart("alternative")
@@ -96,10 +87,7 @@ def send_html_email_optimized(
             server.quit()
             logger.info("SMTP connection closed.")
 
-# ------------------- Public Function -------------------
-
 def send_new_signin_email(receiver_email: str, firstName,lastName,time_data,ip_address,location,extra_data):
-    """Sends an automated response regarding a new signin."""
     try:
         html_body = generate_new_signin_warning_email_from_template(
             firstName,lastName,time_data,ip_address,location,extra_data
@@ -130,7 +118,6 @@ This is an automated message sent to tell {firstName} that there was a new sign 
 
 
 def send_password_reset_link(user_email: str, link: str):
-    """Sends password reset magic link."""
     try:
         html_body = f"""
         <html>
@@ -173,7 +160,6 @@ def send_password_reset_link(user_email: str, link: str):
 
 
 def send_invite_notification(invitee_email: str, inviter_email:str,password:str):
-    """Sends invite"""
     try:
         html_body = generate_invitation_email_from_template(
             invitee_email=invitee_email,
@@ -209,7 +195,6 @@ def send_invite_notification(invitee_email: str, inviter_email:str,password:str)
 
 
 def send_revoke_notification(revoked_user_email: str, revoked_by_email:str,):
-    """Sends revoke notification"""
     try:
         html_body = generate_revoke_invitation_email_from_template(
             revoked_user_email=revoked_user_email,revoked_by_email=revoked_by_email,project_name=""

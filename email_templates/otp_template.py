@@ -51,9 +51,6 @@ otp_template_string = Template("""
 """)
 
 def generate_login_otp_email_from_template(otp_code: str, user_email: str) -> str:
-    """
-    Generates an OTP email from a template, handling potential errors.
-    """
     try:
         return otp_template_string.substitute(
             otp_code=otp_code,

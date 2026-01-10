@@ -29,7 +29,7 @@ async def generate_admin_access_tokens(userId)->accessTokenOut:
     try:
         obj_id = ObjectId(userId)
     except errors.InvalidId:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid User Id")    # or raise an error / log it    
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid User Id")
 
     new_access_token = await add_admin_access_tokens(token_data=accessTokenCreate(userId=userId))
     new_access_token.accesstoken = await create_jwt_admin_token(token=new_access_token.accesstoken,userId=userId)
@@ -43,7 +43,7 @@ async def generate_refresh_tokens(userId,accessToken)->refreshTokenOut:
     try:
         obj_id = ObjectId(userId)
     except errors.InvalidId:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid User Id While trying to create refresh token")    # or raise an error / log it    
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid User Id While trying to create refresh token")
 
     accessToken = await decode_jwt_token(accessToken)
     if accessToken==None:
@@ -51,7 +51,7 @@ async def generate_refresh_tokens(userId,accessToken)->refreshTokenOut:
     try:
         obj_id = ObjectId(accessToken['accessToken'])
     except errors.InvalidId:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid Access Id While trying to create refresh token")    # or raise an error / log it    
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid Access Id While trying to create refresh token")
 
     new_refresh_token =await add_refresh_tokens(token_data=refreshTokenCreate(userId=userId,previousAccessToken=accessToken['accessToken']))
     return new_refresh_token
@@ -63,7 +63,7 @@ async def validate_refreshToken(refreshToken:str):
     try:
         obj_id = ObjectId(refreshToken)
     except errors.InvalidId:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid Refresh Id")   # or raise an error / log it    
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid Refresh Id")
 
     refresh_token = await get_refresh_tokens(refreshToken=refreshToken)
     if refresh_token:
@@ -81,7 +81,7 @@ async def validate_member_accesstoken(accessToken:str):
     try:
         obj_id = ObjectId(decodedAccessToken['accessToken'])
     except errors.InvalidId:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid Access Token")   # or raise an error / log it    
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid Access Token")
     except TypeError:
         return None
 
@@ -106,7 +106,7 @@ async def validate_admin_accesstoken_otp(accessToken:str):
         obj_id = ObjectId(decodedAccessToken['accessToken'])
     except errors.InvalidId:
         
-        return None  # or raise an error / log it    
+        return None
 
     print("o1")
     if decodedAccessToken:
@@ -137,7 +137,7 @@ async def validate_admin_accesstoken(accessToken:str):
         obj_id = ObjectId(decodedAccessToken['accessToken'])
     except errors.InvalidId:
         
-        return None  # or raise an error / log it    
+        return None
 
     print("o1")
     if decodedAccessToken:
@@ -167,7 +167,7 @@ async def validate_expired_admin_accesstoken(accessToken:str):
     try:
         obj_id = ObjectId(decodedAccessToken['accessToken'])
     except errors.InvalidId:
-        return None  # or raise an error / log it    
+        return None
 
     
     if decodedAccessToken:
@@ -198,7 +198,7 @@ async def validate_member_accesstoken_without_expiration(accessToken:str):
     try:
         obj_id = ObjectId(decodedAccessToken['accessToken'])
     except errors.InvalidId:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid Access Id")   # or raise an error / log it    
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid Access Id")
 
     
     if decodedAccessToken:

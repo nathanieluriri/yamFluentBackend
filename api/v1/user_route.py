@@ -61,17 +61,13 @@ from security.auth import verify_token_to_refresh,verify_token_user_role
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
-# --- Step 1: Redirect user to Google login ---
 @router.get("/mobile/google/auth", response_model_exclude={"data": {"password","loginType","oauth_access_token","oauth_refresh_token"}})
 async def mobile_login_with_google_account(request: Request)->None:
     redirect_uri = str(request.url_for("mobile_auth_callback_user"))
 
-    # Force https
     redirect_uri = re.sub(r"^http://", "https://", redirect_uri)
 
     return await oauth.google.authorize_redirect(request, redirect_uri)  # type: ignore
-
-# --- Step 2: Handle callback from Google ---
 
 @router.get("/mobile/auth/callback", response_model_exclude={"data": {"password","loginType","oauth_access_token","oauth_refresh_token"}}, name="mobile_auth_callback_user")
 async def mobile_auth_callback_user(request: Request):
@@ -149,17 +145,6 @@ async def refresh_user_tokens(user_data:UserRefresh,token:accessTokenOut = Depen
 async def logout_user(
     token: accessTokenOut = Depends(verify_token_user_role),
 ):
-    """
-    Logs out the currently authenticated admin.
-
-    This action invalidates the admin’s active session(s) by
-    revoking refresh tokens and/or marking tokens as unusable.
-
-    **Authorization:**  
-    Requires a valid Access Token in the  
-    `Authorization: Bearer <token>` header.
-    """
-
     await logout_user_service(user_id=token.userId)
 
     return APIResponse(
@@ -169,18 +154,6 @@ async def logout_user(
     )
 
 
-
-# @router.delete("/account",dependencies=[Depends(verify_token_user_role)])
-# async def delete_user_account(token:accessTokenOut = Depends(verify_token_user_role)):
-#     result = await remove_user(user_id=token.userId)
-#     return result
-
-
-
-
-# -------------------------
-# -------- Onboarding -----
-# -------------------------
 
 @router.patch("/onboard/complete",response_model=APIResponse[UserOut], dependencies=[Depends(verify_token_user_role)],response_model_exclude={"data":{"password"}})
 async def update_onboarding_information_and_complete_user_profile(driver_details:UserUpdateProfile,token:accessTokenOut = Depends(verify_token_user_role)):
@@ -206,9 +179,6 @@ async def retrieve_onboarding_options():
 
 
 
-# -------------------------
-# -------- scenerios -----
-# -------------------------
 @router.get(
     "/scenerio/options",
     response_model=APIResponse[List[UserScenerioOptions]],
@@ -219,10 +189,6 @@ def get_scenerio_options():
     return APIResponse(data=build_user_scenerio_options(),status_code=200,detail="Fetched successfully")
 
  
-# -----------------------------------
-# ------- PASSWORD MANAGEMENT ------- 
-# -----------------------------------
-
  
 @router.patch("/password-reset",dependencies=[Depends(verify_token_user_role)])
 async def update_driver_password_while_logged_in(driver_details:UserUpdatePassword,token:accessTokenOut = Depends(verify_token_user_role)):
@@ -264,8 +230,6 @@ async def start_password_reset_process_for_driver_that_forgot_password(
     request: Request,
     driver_details: ResetPasswordInitiation
 ):
-    """Email a magic-link reset token to the provided address if it exists."""
-    
     redirect_uri = str(request.url_for("mobile_auth_callback_user"))
     redirect_uri = re.sub(r"^http://", "https://", redirect_uri)
     parsed = urlparse(redirect_uri)
@@ -344,6 +308,5 @@ async def reset_password_from_web(
 async def finish_password_reset_process_for_driver_that_forgot_password(
     driver_details: ResetPasswordConclusion
 ):
-    """Reset the password using a valid reset token and a new password."""
     driver =  await user_reset_password_conclusion(driver_details)
     return APIResponse(data = driver,status_code=200,detail="Successfully updated profile")
