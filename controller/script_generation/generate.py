@@ -16,9 +16,13 @@ from controller.script_generation.parsing import (
     parse_turns,
     trim_turns,
 )
+from controller.script_generation.model_config import SCRIPT_MODEL_PRIMARY
 from controller.script_generation.prompts import (
+    ScriptConfig,
     build_system_prompt,
     build_user_prompt,
+    default_end_state,
+    default_scenario_context,
     enum_value,
     normalize_learner_type,
     normalize_proficiency,
@@ -39,8 +43,8 @@ async def generate_script(user_id: str, scenario_name: str) -> FluencyScript:
         raise HTTPException(status_code=404, detail="User not found")
 
     profiling: Optional[UserPersonalProfilingData] = getattr(
-    user, "userPersonalProfilingData", None
-)
+        user, "userPersonalProfilingData", None
+    )
     if not profiling:
         raise HTTPException(
             status_code=400,
@@ -53,23 +57,36 @@ async def generate_script(user_id: str, scenario_name: str) -> FluencyScript:
     learner_type = normalize_learner_type(enum_value(profiling.learnerType))
     proficiency = normalize_proficiency(enum_value(profiling.currentProficiency))
     native_language = enum_value(profiling.nativeLanguage)
-
-    system_prompt = build_system_prompt(
+    user_first = getattr(user, "firstName", "") or ""
+    user_last = getattr(user, "lastName", "") or ""
+    user_name = " ".join([part for part in [user_first, user_last] if part]).strip()
+    if not user_name:
+        user_name = "there"
+    coach_name = os.getenv("COACH_NAME", "Coach")
+    locale = os.getenv("USER_LOCALE", "en-US")
+    scenario_context = default_scenario_context(scenario_name)
+    end_state = default_end_state(scenario_name)
+    config = ScriptConfig(
+        user_name=user_name,
+        coach_name=coach_name,
+        locale=locale,
+        native_language=native_language,
+        interests=[],
+        daily_practice_time=daily_practice_time,
         target_turns=target_turns,
-        goals=goals,
+        scenario_name=scenario_name,
+        scenario_context=scenario_context,
+        main_goals=goals,
         learner_type=learner_type,
         proficiency=proficiency,
-        native_language=native_language,
-        scenario_name=scenario_name,
-    )
-    user_prompt = build_user_prompt(
-        scenario_name=scenario_name,
-        goals=goals,
-        daily_practice_time=daily_practice_time,
+        end_state=end_state,
     )
 
+    system_prompt = build_system_prompt(config)
+    user_prompt = build_user_prompt(config)
+
     client = get_openai_client()
-    model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+    model_name = os.getenv("OPENAI_MODEL", SCRIPT_MODEL_PRIMARY)
 
     response_format = {
         "type": "json_schema",

@@ -13,6 +13,7 @@ from controller.script_generation.clients import (
     get_r2_client,
     openai_request_with_retries,
 )
+from controller.script_generation.model_config import TTS_MODEL
 
 
 async def response_to_bytes(response: object) -> bytes:
@@ -112,7 +113,7 @@ async def generate_audio_url(
     voice: str,
     key_prefix: str,
 ) -> str:
-    tts_model = os.getenv("OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
+    tts_model = os.getenv("OPENAI_TTS_MODEL", TTS_MODEL)
     estimated_tokens = estimate_tokens_from_texts([text])
     response = await openai_request_with_retries(
         lambda: client.audio.speech.create(

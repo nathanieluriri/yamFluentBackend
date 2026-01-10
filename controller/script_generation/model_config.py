@@ -1,0 +1,6 @@
+SCRIPT_MODEL_PRIMARY = "gpt-5.2"
+SCRIPT_MODEL_FALLBACK = "gpt-4.1"
+REALTIME_MODEL = "gpt-realtime-mini-2025-12-15"
+TTS_MODEL = "gpt-4o-mini-tts"
+VOICE_NAME_PLACEHOLDER = "VOICE_NAME"
+SPEAKING_STYLE = "warm, confident, friendly, not overly excited"

@@ -4,7 +4,7 @@ from datetime import datetime
 from urllib.parse import quote, urlparse
 from fastapi import APIRouter, Request, status, Depends, Form, HTTPException
 from typing import List, Dict, Any
-from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from schemas.imports import (
     ResetPasswordConclusion,
     ResetPasswordInitiation,
@@ -47,6 +47,11 @@ from services.user_service import (
     user_reset_password_intiation,
     get_reset_token_state,
     refresh_user_tokens_reduce_number_of_logins
+)
+from services.password_reset_web_service import (
+    render_reset_error_response,
+    render_reset_landing_response,
+    render_reset_success_response,
 )
 from security.auth import verify_token_to_refresh,verify_token_user_role
 
@@ -177,7 +182,7 @@ async def logout_user(
 # -------- Onboarding -----
 # -------------------------
 
-@router.patch("/onboard/complete",dependencies=[Depends(verify_token_user_role)])
+@router.patch("/onboard/complete",response_model=APIResponse[UserOut], dependencies=[Depends(verify_token_user_role)],response_model_exclude={"data":{"password"}})
 async def update_onboarding_information_and_complete_user_profile(driver_details:UserUpdateProfile,token:accessTokenOut = Depends(verify_token_user_role)):
     driver =  await update_user_by_id(driver_id=token.userId,driver_data=driver_details)
     return APIResponse(data = driver,status_code=200,detail="Successfully updated profile")
@@ -223,206 +228,6 @@ def get_scenerio_options():
 async def update_driver_password_while_logged_in(driver_details:UserUpdatePassword,token:accessTokenOut = Depends(verify_token_user_role)):
     driver =  await update_user_by_id(driver_id=token.userId,driver_data=driver_details,is_password_getting_changed=True)
     return APIResponse(data = driver,status_code=200,detail="Successfully updated profile")
-
-
-def _build_html_response(content: str, status_code: int = 200) -> HTMLResponse:
-    response = HTMLResponse(content=content, status_code=status_code)
-    response.headers["Cache-Control"] = "no-store"
-    return response
-
-
-def _render_reset_landing_page(reset_token: str, deep_link: str) -> str:
-    return f"""
-    <!doctype html>
-    <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Reset your YamFluent password</title>
-        <style>
-            body {{
-                margin: 0;
-                font-family: Arial, sans-serif;
-                background: #f7f7f7;
-                color: #1a1a1a;
-            }}
-            .container {{
-                max-width: 520px;
-                margin: 32px auto;
-                background: #ffffff;
-                border-radius: 12px;
-                padding: 24px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-            }}
-            h1 {{
-                margin-top: 0;
-                font-size: 24px;
-            }}
-            .subtitle {{
-                color: #4b5563;
-                margin-bottom: 8px;
-            }}
-            .note {{
-                font-size: 13px;
-                color: #6b7280;
-            }}
-            .button {{
-                display: inline-block;
-                background: #0f766e;
-                color: #ffffff;
-                text-decoration: none;
-                padding: 12px 18px;
-                border-radius: 8px;
-                font-weight: 600;
-                margin: 12px 0;
-            }}
-            .section {{
-                margin-top: 20px;
-                padding-top: 16px;
-                border-top: 1px solid #e5e7eb;
-            }}
-            label {{
-                display: block;
-                margin-top: 12px;
-                font-size: 14px;
-            }}
-            input {{
-                width: 100%;
-                padding: 10px;
-                margin-top: 6px;
-                border: 1px solid #d1d5db;
-                border-radius: 8px;
-                font-size: 14px;
-            }}
-            button {{
-                margin-top: 16px;
-                width: 100%;
-                padding: 12px;
-                border: none;
-                border-radius: 8px;
-                background: #111827;
-                color: #ffffff;
-                font-size: 15px;
-                font-weight: 600;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>Reset your YamFluent password</h1>
-            <div class="subtitle">This link was sent to you because you requested a password reset.</div>
-            <div class="note">This link expires in 15 minutes.</div>
-
-            <div class="section">
-                <strong>Option 1: Open in the YamFluent app</strong><br />
-                <a class="button" href="{deep_link}">Open in app</a>
-            </div>
-
-            <div class="section">
-                <strong>Option 2: Reset in your browser</strong>
-                <form method="post" action="/v1/users/auth/reset-password">
-                    <input type="hidden" name="reset_token" value="{reset_token}" />
-                    <label for="password">New password</label>
-                    <input type="password" id="password" name="password" minlength="8" required />
-                    <label for="confirm_password">Confirm new password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" minlength="8" required />
-                    <button type="submit">Reset password</button>
-                </form>
-                <div class="note">If you didn't request this, you can ignore this email.</div>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-
-def _render_reset_error_page(message: str) -> str:
-    return f"""
-    <!doctype html>
-    <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Reset link expired</title>
-        <style>
-            body {{
-                margin: 0;
-                font-family: Arial, sans-serif;
-                background: #f7f7f7;
-                color: #1a1a1a;
-            }}
-            .container {{
-                max-width: 520px;
-                margin: 32px auto;
-                background: #ffffff;
-                border-radius: 12px;
-                padding: 24px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-            }}
-            h1 {{
-                margin-top: 0;
-                font-size: 22px;
-            }}
-            .note {{
-                font-size: 13px;
-                color: #6b7280;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>Reset link expired</h1>
-            <p>{message}</p>
-            <p class="note">Request a new reset link and try again.</p>
-            <p class="note">If you didn't request this, you can ignore this email.</p>
-        </div>
-    </body>
-    </html>
-    """
-
-
-def _render_reset_success_page() -> str:
-    return """
-    <!doctype html>
-    <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Password updated</title>
-        <style>
-            body {
-                margin: 0;
-                font-family: Arial, sans-serif;
-                background: #f7f7f7;
-                color: #1a1a1a;
-            }
-            .container {
-                max-width: 520px;
-                margin: 32px auto;
-                background: #ffffff;
-                border-radius: 12px;
-                padding: 24px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-            }
-            h1 {
-                margin-top: 0;
-                font-size: 22px;
-            }
-            .note {
-                font-size: 13px;
-                color: #6b7280;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>Password updated successfully</h1>
-            <p>You can return to the app and sign in with your new password.</p>
-            <p class="note">If you didn't request this, you can ignore this email.</p>
-        </div>
-    </body>
-    </html>
-    """
 
 
 async def _validate_reset_token_for_web(reset_token: str) -> str:
@@ -476,12 +281,11 @@ async def start_password_reset_process_for_driver_that_forgot_password(
 async def reset_password_landing_page(reset_token: str):
     error_message = await _validate_reset_token_for_web(reset_token)
     if error_message:
-        return _build_html_response(_render_reset_error_page(error_message), status_code=400)
+        return render_reset_error_response(error_message, status_code=400)
 
     app_scheme = os.getenv("APP_SCHEME", "yamfluent").replace("://", "")
     deep_link = f"{app_scheme}://auth/reset-password?reset_token={reset_token}"
-    html_content = _render_reset_landing_page(reset_token, deep_link)
-    return _build_html_response(html_content)
+    return render_reset_landing_response(reset_token, deep_link)
 
 
 @router.post("/auth/reset-password")
@@ -498,19 +302,19 @@ async def reset_password_from_web(
     if error_message:
         if wants_json:
             return JSONResponse(status_code=400, content={"detail": error_message})
-        return _build_html_response(_render_reset_error_page(error_message), status_code=400)
+        return render_reset_error_response(error_message, status_code=400)
 
     if password != confirm_password:
         message = "Passwords do not match."
         if wants_json:
             return JSONResponse(status_code=400, content={"detail": message})
-        return _build_html_response(_render_reset_error_page(message), status_code=400)
+        return render_reset_error_response(message, status_code=400)
 
     if len(password) < 8:
         message = "Password must be at least 8 characters."
         if wants_json:
             return JSONResponse(status_code=400, content={"detail": message})
-        return _build_html_response(_render_reset_error_page(message), status_code=400)
+        return render_reset_error_response(message, status_code=400)
 
     try:
         await user_reset_password_conclusion(
@@ -520,11 +324,11 @@ async def reset_password_from_web(
         message = str(exc.detail)
         if wants_json:
             return JSONResponse(status_code=exc.status_code, content={"detail": message})
-        return _build_html_response(_render_reset_error_page(message), status_code=exc.status_code)
+        return render_reset_error_response(message, status_code=exc.status_code)
 
     if wants_json:
         return JSONResponse(status_code=200, content={"detail": "Password updated successfully."})
-    return _build_html_response(_render_reset_success_page())
+    return render_reset_success_response()
 
 
 
