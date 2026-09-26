@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 from limits.strategies import FixedWindowRateLimiter
-from datetime import datetime,timedelta
 from limits.storage import RedisStorage
 import math
 from schemas.response_schema import APIResponse
@@ -18,9 +17,10 @@ from core.scheduler import scheduler
 from pymongo import MongoClient
 import redis
 from apscheduler.triggers.interval import IntervalTrigger
+from openai import OpenAIError
 from starlette.middleware.sessions import SessionMiddleware
 
-from security.encrypting_jwt import decode_jwt_token
+from security.encrypting_jwt import _get_jwt_secret, decode_jwt_token
 
 MONGO_URI = os.getenv("MONGO_URL")
 REDIS_URI = f"redis://{os.getenv('REDIS_HOST', '127.0.0.1')}:{os.getenv('REDIS_PORT', '6379')}/0"
@@ -75,7 +75,7 @@ app = FastAPI(
     
 )
 app.add_middleware(RequestTimingMiddleware)
-app.add_middleware(SessionMiddleware, secret_key="some-random-string")
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET") or _get_jwt_secret())
 
 redis_url = os.getenv("CELERY_BROKER_URL") or os.getenv("REDIS_URL") \
     or f"redis://{os.getenv('REDIS_HOST', 'redis')}:{os.getenv('REDIS_PORT', '6379')}/0"
@@ -185,13 +185,20 @@ async def custom_http_exception_handler(request: Request, exc: HTTPException):
         ).dict()
     )
 
-async def test_scheduler(message):
-    print(message)
+@app.exception_handler(OpenAIError)
+async def openai_exception_handler(request: Request, exc: OpenAIError):
+    print(f"OpenAI request failed on {request.url.path}: {exc!r}")
+    return JSONResponse(
+        status_code=503,
+        content=APIResponse(
+            status_code=503,
+            data=None,
+            detail="The AI service is unavailable right now. Please try again shortly.",
+        ).dict()
+    )
+
 @app.get("/", tags=["Health"], include_in_schema=False, name="read_root")
 def read_root():
-    run_time = datetime.now() + timedelta(seconds=20)
-    scheduler.add_job(test_scheduler,"date",run_date=run_time,args=[f"test message {run_time}"],misfire_grace_time=31536000)
-    
     data= {"message": "Hello from FasterAPI!"}
     return APIResponse(status_code=200,detail="Successfully fetched data",data=data)
 
