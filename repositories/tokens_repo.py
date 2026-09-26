@@ -90,11 +90,11 @@ async def get_access_tokens(accessToken:str)->accessTokenOut:
                 return None
             
         else:
-            delete_access_token(accessToken=str(token['_id'])) 
+            await delete_access_token(accessToken=str(token['_id']))
             return None
     else:
         print("No token found")
-        return "None"
+        return None
     
     
     
