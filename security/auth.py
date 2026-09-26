@@ -27,27 +27,17 @@ async def verify_token_to_refresh(token: str = Depends(token_auth_scheme)):
     
 
 async def verify_token_user_role(token: str = Depends(token_auth_scheme))->accessTokenOut:
-     
-   
     try:
-        decoded_token =await decode_jwt_token(token=token.credentials)
+        decoded_token = await decode_jwt_token(token=token.credentials)
         result = await get_access_tokens(accessToken=decoded_token['access_token'])
-       
-        USER = await retrieve_user_by_user_id(id=result.userId)
-        if USER and result!=None:
+        if result is not None and await retrieve_user_by_user_id(id=result.userId):
             return result
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token :{e}"
-        )    
-    if result==None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
-        )
-    else:
-        return result
+    except Exception:
+        pass
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid token"
+    )
  
         
       

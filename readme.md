@@ -51,6 +51,7 @@ Common optional:
 - `APP_SCHEME` (mobile deep link scheme, default `yamfluent`)
 - `CLOUDFLARE_R2_ENDPOINT`, `CLOUDFLARE_R2_BUCKET`, `CLOUDFLARE_R2_PUBLIC_URL`
 - `JWT_SECRET_KEY` or `SECRET_KEY` (alternate names for JWT signing secret)
+- `SESSION_SECRET` (signs the session cookie used by Google sign-in; defaults to the JWT secret)
 
 ## Local Development
 

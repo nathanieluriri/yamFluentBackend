@@ -20,20 +20,39 @@ from controller.script_generation.model_config import SCRIPT_MODEL_PRIMARY
 from controller.script_generation.prompts import (
     ScriptConfig,
     build_system_prompt,
+    build_system_prompt_with_memory,
     build_user_prompt,
+    build_user_prompt_with_memory,
     default_end_state,
     default_scenario_context,
     enum_value,
+    extract_session_insights,
     normalize_learner_type,
     normalize_proficiency,
     turn_count_for_time,
 )
+from repositories.session import get_sessions
 from repositories.user_repo import get_user
 from schemas.imports import AIGeneratedTurns, FluencyScript, Turn
 from schemas.user_schema import UserPersonalProfilingData
 
+MEMORY_SESSION_LIMIT = 5
+
+
+async def previous_sessions(user_id: str, scenario_name: str) -> list:
+    try:
+        return await get_sessions(
+            filter_dict={"userId": user_id, "scenario": scenario_name},
+            start=0,
+            stop=MEMORY_SESSION_LIMIT,
+            sort=[("last_updated", -1)],
+        )
+    except Exception:
+        return []
+
 
 async def generate_script(user_id: str, scenario_name: str) -> FluencyScript:
+    scenario_name = enum_value(scenario_name)
     if not ObjectId.is_valid(user_id):
         raise HTTPException(status_code=400, detail="Invalid user ID format")
 
@@ -81,8 +100,13 @@ async def generate_script(user_id: str, scenario_name: str) -> FluencyScript:
         end_state=end_state,
     )
 
-    system_prompt = build_system_prompt(config)
-    user_prompt = build_user_prompt(config)
+    insights = extract_session_insights(await previous_sessions(user_id, scenario_name))
+    if insights["has_history"]:
+        system_prompt = build_system_prompt_with_memory(config, insights)
+        user_prompt = build_user_prompt_with_memory(config, insights)
+    else:
+        system_prompt = build_system_prompt(config)
+        user_prompt = build_user_prompt(config)
 
     client = get_openai_client()
     model_name = os.getenv("OPENAI_MODEL", SCRIPT_MODEL_PRIMARY)

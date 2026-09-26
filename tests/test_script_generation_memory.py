@@ -108,3 +108,28 @@ def test_build_system_prompt_with_memory_constraints():
     assert "EXACT" in prompt
     assert "Good to see you again" in prompt
     assert "TurnSpeechAnalysis" in prompt
+
+
+def test_extract_session_insights_reads_hesitation_as_a_score():
+    calm = _make_session(
+        last_updated=1000,
+        user_texts=["I want espresso."],
+        ai_corrections=["Nice."],
+        hesitations=[100],
+        mispronounced_lists=[[]],
+        confidence=95,
+        fluency=95,
+    )
+    hesitant = _make_session(
+        last_updated=2000,
+        user_texts=["I want a latte.", "Um, a large one, like, please."],
+        ai_corrections=["Good.", "Sure."],
+        hesitations=[100, 62],
+        mispronounced_lists=[[], []],
+        confidence=80,
+        fluency=80,
+    )
+    assert extract_session_insights([calm])["hesitation_high"] is False
+    insights = extract_session_insights([hesitant])
+    assert insights["hesitation_high"] is True
+    assert insights["top_user_hesitation_turns"][0] == 3

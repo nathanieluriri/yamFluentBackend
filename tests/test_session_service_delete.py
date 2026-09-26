@@ -27,3 +27,22 @@ def test_delete_sessions_for_user_deletes_all(monkeypatch):
 
     assert deleted == 2
     assert removed == [("s1", "user-1"), ("s2", "user-1")]
+
+
+def test_session_summaries_list_newest_first(monkeypatch):
+    seen = {}
+
+    async def fake_get_sessions(filter_dict, start, stop, sort=None):
+        seen.update(filter_dict=filter_dict, start=start, stop=stop, sort=sort)
+        return []
+
+    monkeypatch.setattr(session_service, "get_sessions", fake_get_sessions)
+
+    asyncio.run(session_service.retrieve_session_summaries("user-1", start=0, stop=1))
+
+    assert seen == {
+        "filter_dict": {"userId": "user-1"},
+        "start": 0,
+        "stop": 1,
+        "sort": [("last_updated", -1)],
+    }

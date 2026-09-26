@@ -1,4 +1,4 @@
-from typing import Iterable, List, Set, Tuple
+from typing import Iterable, List, Optional, Set, Tuple
 
 from controller.grading.text_align import (
     AlignmentResult,
@@ -17,17 +17,31 @@ def clamp_leniency(leniency: float) -> float:
     return max(0.5, min(1.5, leniency))
 
 
-def count_fillers(tokens: List[str]) -> Tuple[int, int]:
+def unscripted_tokens(alignment: AlignmentResult) -> List[bool]:
+    return [expected != actual for expected, actual in alignment.aligned_pairs if actual]
+
+
+def count_fillers(
+    tokens: List[str], unscripted: Optional[List[bool]] = None
+) -> Tuple[int, int]:
     filler_words: Set[str] = {"um", "uh", "uhm", "umm", "erm", "hmm", "like"}
+    if unscripted is None:
+        unscripted = [True] * len(tokens)
     filler_count = 0
     i = 0
     while i < len(tokens):
         token = tokens[i]
-        if token in filler_words:
+        if token in filler_words and unscripted[i]:
             filler_count += 1
             i += 1
             continue
-        if token == "you" and i + 1 < len(tokens) and tokens[i + 1] == "know":
+        if (
+            token == "you"
+            and i + 1 < len(tokens)
+            and tokens[i + 1] == "know"
+            and unscripted[i]
+            and unscripted[i + 1]
+        ):
             filler_count += 1
             i += 2
             continue
@@ -58,9 +72,9 @@ def compute_scores(
     leniency: float,
 ) -> Tuple[int, int, int, float, int, int, AlignmentResult, List[str]]:
     strictness = 1 / clamp_leniency(leniency)
-    filler_count, total_tokens = count_fillers(actual_tokens)
-    filler_ratio = filler_count / max(1, total_tokens)
     alignment = align_words(expected_tokens, actual_tokens)
+    filler_count, total_tokens = count_fillers(actual_tokens, unscripted_tokens(alignment))
+    filler_ratio = filler_count / max(1, total_tokens)
     wer = (alignment.substitutions + alignment.insertions + alignment.deletions) / max(
         1, len(expected_tokens)
     )
