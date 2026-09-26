@@ -116,7 +116,9 @@ async def retrieve_session_summaries(
     if filters is None:
         filters = {}
     filters["userId"] = user_id
-    sessions = await get_sessions(filter_dict=filters, start=start, stop=stop)
+    sessions = await get_sessions(
+        filter_dict=filters, start=start, stop=stop, sort=[("last_updated", -1)]
+    )
     return [ListOfSessionOut(**session.model_dump()) for session in sessions]
 
 
