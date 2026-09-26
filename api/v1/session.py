@@ -151,7 +151,7 @@ async def create_session(
 async def users_turn_to_speak(
     request: Request,
     turn_index:int,
-    id: str = Path(..., description="ID of the {db_name} to update"),
+    id: str = Path(..., description="ID of the session to update"),
     audio: UploadFile = File(..., description="User audio MP3"),
     token:accessTokenOut = Depends(verify_token_user_role)
 ):
