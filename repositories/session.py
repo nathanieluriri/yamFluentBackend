@@ -26,15 +26,15 @@ async def get_session(filter_dict: dict) -> Optional[SessionOut]:
             detail=f"An error occurred while fetching session: {str(e)}"
         )
     
-async def get_sessions(filter_dict: dict = {},start=0,stop=100) -> List[SessionOut]:
+async def get_sessions(filter_dict: dict = {},start=0,stop=100,sort=None) -> List[SessionOut]:
     try:
         if filter_dict is None:
             filter_dict = {}
 
-        cursor = (db.sessions.find(filter_dict)
-        .skip(start)
-        .limit(stop - start)
-        )
+        cursor = db.sessions.find(filter_dict)
+        if sort:
+            cursor = cursor.sort(sort)
+        cursor = cursor.skip(start).limit(stop - start)
         session_list = []
 
         async for doc in cursor:

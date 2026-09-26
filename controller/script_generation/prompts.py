@@ -6,6 +6,10 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 
+HESITATION_HIGH_BELOW = 85
+HESITATION_LOW_FROM = 95
+
+
 def enum_value(value: object) -> str:
     return value.value if hasattr(value, "value") else str(value)
 
@@ -680,14 +684,16 @@ def extract_session_insights(previous_sessions_same_scenario: Sequence[object]) 
         elif delta < -0.05:
             recent_average_score_trend = "down"
 
-    hesitation_scores.sort(key=lambda pair: (-pair[0], pair[1]))
+    hesitation_scores.sort(key=lambda pair: (pair[0], pair[1]))
     top_user_hesitation_turns = [index for _, index in hesitation_scores[:3]]
     average_hesitation = (
         sum(score for score, _ in hesitation_scores) / len(hesitation_scores)
         if hesitation_scores
         else None
     )
-    hesitation_high = average_hesitation is not None and average_hesitation >= 3
+    hesitation_high = (
+        average_hesitation is not None and average_hesitation < HESITATION_HIGH_BELOW
+    )
 
     repeated_words = [
         word for word, sessions_set in word_sessions.items() if len(sessions_set) >= 2
@@ -816,7 +822,7 @@ def build_system_prompt_with_memory(config: ScriptConfig, insights: Dict[str, An
     if config.proficiency in {"INTERMEDIATE", "ADVANCED"}:
         trend = insights.get("recent_average_score_trend")
         avg_hesitation = insights.get("average_user_hesitation")
-        low_hesitation = avg_hesitation is not None and avg_hesitation <= 2
+        low_hesitation = avg_hesitation is not None and avg_hesitation >= HESITATION_LOW_FROM
         if trend == "up" or low_hesitation:
             trend_line = "Recent performance improved; gently ramp complexity and diction."
         elif trend == "down":
